@@ -562,12 +562,18 @@ case class S2Edge(innerGraph: S2Graph,
 
   override def graph(): Graph = innerGraph
 
-  override def id(): AnyRef = EdgeId(srcVertex.innerId, tgtVertex.innerId, label(), direction)
+  override def id(): AnyRef = {
+    if (this.innerLabel.consistencyLevel == "strong") {
+      EdgeId(srcVertex.innerId, tgtVertex.innerId, label(), direction, 0)
+    } else {
+      EdgeId(srcVertex.innerId, tgtVertex.innerId, label(), direction, ts)
+    }
+  }
 
   override def label(): String = innerLabel.label
 }
 
-case class EdgeId(srcVertexId: InnerValLike, tgtVertexId: InnerValLike, labelName: String, direction: String)
+case class EdgeId(srcVertexId: InnerValLike, tgtVertexId: InnerValLike, labelName: String, direction: String, ts: Long)
 
 case class EdgeMutate(edgesToDelete: List[IndexEdge] = List.empty[IndexEdge],
                       edgesToInsert: List[IndexEdge] = List.empty[IndexEdge],

@@ -23,7 +23,7 @@ import java.util
 import java.util.concurrent.{Executors, TimeUnit}
 
 import com.typesafe.config.{Config, ConfigFactory}
-import org.apache.commons.configuration.Configuration
+import org.apache.commons.configuration.{BaseConfiguration, Configuration}
 import org.apache.s2graph.core.GraphExceptions.{FetchTimeoutException, LabelNotExistException}
 import org.apache.s2graph.core.JSONParser._
 import org.apache.s2graph.core.mysqls._
@@ -33,7 +33,8 @@ import org.apache.s2graph.core.types._
 import org.apache.s2graph.core.utils.{DeferCache, Extensions, logger}
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
 import org.apache.tinkerpop.gremlin.structure
-import org.apache.tinkerpop.gremlin.structure.Graph.Variables
+import org.apache.tinkerpop.gremlin.structure.Graph.Features.EdgeFeatures
+import org.apache.tinkerpop.gremlin.structure.Graph.{Features, Variables}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
 import org.apache.tinkerpop.gremlin.structure.{Edge, Graph, T, Transaction}
 import play.api.libs.json.{JsObject, Json}
@@ -41,6 +42,7 @@ import play.api.libs.json.{JsObject, Json}
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent._
 import scala.concurrent.duration.Duration
@@ -55,13 +57,16 @@ object S2Graph {
 
   val DefaultScore = 1.0
 
+
   private val DefaultConfigs: Map[String, AnyRef] = Map(
     "hbase.zookeeper.quorum" -> "localhost",
     "hbase.table.name" -> "s2graph",
     "hbase.table.compression.algorithm" -> "gz",
     "phase" -> "dev",
-    "db.default.driver" ->  "org.h2.Driver",
-    "db.default.url" -> "jdbc:h2:file:./var/metastore;MODE=MYSQL",
+//    "db.default.driver" ->  "org.h2.Driver",
+//    "db.default.url" -> "jdbc:h2:file:./var/metastore;MODE=MYSQL",
+    "db.default.driver" -> "com.mysql.jdbc.Driver",
+    "db.default.url" -> "jdbc:mysql://default:3306/graph_dev",
     "db.default.password" -> "graph",
     "db.default.user" -> "graph",
     "cache.max.size" -> java.lang.Integer.valueOf(10000),
@@ -92,7 +97,34 @@ object S2Graph {
 
   var DefaultConfig: Config = ConfigFactory.parseMap(DefaultConfigs)
 
+  def toTypeSafeConfig(configuration: Configuration): Config = {
+    val m = new mutable.HashMap[String, AnyRef]()
+    for {
+      key <- configuration.getKeys
+      value = configuration.getProperty(key)
+    } {
+      m.put(key, value)
+    }
+    val config  = ConfigFactory.parseMap(m).withFallback(DefaultConfig)
+    config
+  }
 
+  def fromTypeSafeConfig(config: Config): Configuration = {
+    val configuration = new BaseConfiguration()
+    for {
+      e <- config.entrySet()
+    } {
+      configuration.setProperty(e.getKey, e.getValue.unwrapped())
+    }
+    configuration
+  }
+
+  def open(configuration: Configuration): S2Graph = {
+    val numOfThread = Runtime.getRuntime.availableProcessors()
+    val threadPool = Executors.newFixedThreadPool(numOfThread)
+    val ec = ExecutionContext.fromExecutor(threadPool)
+    new S2Graph(toTypeSafeConfig(configuration))(ec)
+  }
 
   def initStorage(graph: S2Graph, config: Config)(ec: ExecutionContext): Storage[_, _] = {
     val storageBackend = config.getString("s2graph.storage.backend")
@@ -500,6 +532,8 @@ object S2Graph {
 
 }
 
+
+@Graph.OptIn(Graph.OptIn.SUITE_STRUCTURE_STANDARD)
 class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph {
 
   import S2Graph._
@@ -521,6 +555,9 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   val ExpireAfterAccess = config.getInt("future.cache.expire.after.access")
   val WaitTimeout = Duration(60, TimeUnit.SECONDS)
   val scheduledEx = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor())
+
+  val management = new Management(this)
+  def getManagement() = management
 
   private def confWithFallback(conf: Config): Config = {
     conf.withFallback(config)
@@ -571,6 +608,23 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     entry <- config.entrySet() if S2Graph.DefaultConfigs.contains(entry.getKey)
     (k, v) = (entry.getKey, entry.getValue)
   } logger.info(s"[Initialized]: $k, ${this.config.getAnyRef(k)}")
+
+  /* TODO */
+  val DefaultService = management.createService("_s2graph", "localhost", "s2graph", 0, None).get
+  val DefaultColumn = ServiceColumn.findOrInsert(DefaultService.id.get, "_vertex", Some("integer"), HBaseType.DEFAULT_VERSION)
+  val DefaultColumnMetas = {
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "name", "string")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "age", "integer")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "lang", "string")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "oid", "integer")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "communityIndex", "integer")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "test", "string")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "testing", "string")
+  }
+
+  val DefaultLabel = management.createLabel("_s2graph", DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType,
+    DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType, true, DefaultService.serviceName, Nil, Nil, "weak", None, None)
+
 
   def getStorage(service: Service): Storage[_, _] = {
     storagePool.getOrElse(s"service:${service.serviceName}", defaultStorage)
@@ -1402,12 +1456,12 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
 
   override def addVertex(kvs: AnyRef*): structure.Vertex = {
     val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
-    val id = kvsMap.getOrElse(T.id.toString, throw new RuntimeException("T.id is required."))
-    val serviceColumnNames = kvsMap.getOrElse(T.label.toString, throw new RuntimeException("ServiceName::ColumnName is required.")).toString
+    val id = kvsMap.getOrElse(T.id.toString, System.currentTimeMillis())
+    val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
     val names = serviceColumnNames.split(S2Vertex.VertexLabelDelimiter)
-    if (names.length != 2) throw new RuntimeException("malformed data on vertex label.")
-    val serviceName = names(0)
-    val columnName = names(1)
+    val (serviceName, columnName) =
+      if (names.length == 1) (DefaultService.serviceName, names(0))
+      else throw new RuntimeException("malformed data on vertex label.")
 
     val vertex = toVertex(serviceName, columnName, id, kvsMap)
     val future = mutateVertices(Seq(vertex), withWait = true).map { vs =>
@@ -1437,4 +1491,21 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   override def compute[C <: GraphComputer](aClass: Class[C]): C = ???
 
   override def compute(): GraphComputer = ???
+
+  class S2GraphFeatures extends Features {
+    import org.apache.s2graph.core.{features => FS}
+    override def edge(): Features.EdgeFeatures = new FS.S2EdgeFeatures
+
+    override def graph(): Features.GraphFeatures = new FS.S2GraphFeatures
+
+    override def supports(featureClass: Class[_ <: Features.FeatureSet], feature: String): Boolean =
+      super.supports(featureClass, feature)
+
+    override def vertex(): Features.VertexFeatures = new FS.S2VertexFeatures
+  }
+
+  private val s2Features = new S2GraphFeatures
+
+  override def features() = s2Features
+
 }

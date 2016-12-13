@@ -297,13 +297,13 @@ class Management(graph: S2Graph) {
                   serviceName: String,
                   indices: Seq[Index],
                   props: Seq[Prop],
-                  consistencyLevel: String,
-                  hTableName: Option[String],
-                  hTableTTL: Option[Int],
+                  consistencyLevel: String = "weak",
+                  hTableName: Option[String] = None,
+                  hTableTTL: Option[Int] = None,
                   schemaVersion: String = DEFAULT_VERSION,
-                  isAsync: Boolean,
+                  isAsync: Boolean = false,
                   compressionAlgorithm: String = "gz",
-                  options: Option[String]): Try[Label] = {
+                  options: Option[String] = None): Try[Label] = {
 
     if (label.length > LABEL_NAME_MAX_LENGTH ) throw new LabelNameTooLongException(s"Label name ${label} too long.( max length : ${LABEL_NAME_MAX_LENGTH}} )")
     if (hTableName.isEmpty && hTableTTL.isDefined) throw new RuntimeException("if want to specify ttl, give hbaseTableName also")

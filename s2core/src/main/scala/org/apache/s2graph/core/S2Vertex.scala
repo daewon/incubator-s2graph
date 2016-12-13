@@ -20,15 +20,17 @@
 package org.apache.s2graph.core
 
 import java.util
-import java.util.function.{Consumer, BiConsumer}
+import java.util.function.{BiConsumer, Consumer}
 
+import org.apache.s2graph.core.GraphExceptions.LabelNotExistException
 import org.apache.s2graph.core.S2Vertex.Props
 import org.apache.s2graph.core.mysqls.{ColumnMeta, LabelMeta, Service, ServiceColumn}
 import org.apache.s2graph.core.types._
 import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex, Edge, VertexProperty}
+import org.apache.tinkerpop.gremlin.structure.{Direction, Edge, Vertex, VertexProperty}
 import play.api.libs.json.Json
+
 import scala.collection.JavaConverters._
 
 case class S2Vertex(graph: S2Graph,
@@ -146,7 +148,9 @@ case class S2Vertex(graph: S2Graph,
     }
   }
 
-  override def addEdge(label: String, vertex: Vertex, kvs: AnyRef*): S2Edge = {
+  override def addEdge(label: String, vertex: Vertex, kvs: AnyRef*): Edge = {
+//    if (label == "systemLabel") throw new java.lang.IllegalArgumentException
+
     vertex match {
       case otherV: S2Vertex =>
         val props = ElementHelper.asMap(kvs: _*).asScala.toMap
@@ -155,7 +159,11 @@ case class S2Vertex(graph: S2Graph,
         val ts = props.get(LabelMeta.timestamp.name).map(_.toString.toLong).getOrElse(System.currentTimeMillis())
         val operation = props.get("operation").map(_.toString).getOrElse("insert")
 
-        graph.addEdgeInner(this, otherV, label, direction, props, ts, operation)
+        try {
+          graph.addEdgeInner(this, otherV, label, direction, props, ts, operation)
+        } catch {
+          case e: LabelNotExistException => throw new java.lang.IllegalArgumentException
+         }
       case _ => throw new RuntimeException("only S2Graph vertex can be used.")
     }
   }
