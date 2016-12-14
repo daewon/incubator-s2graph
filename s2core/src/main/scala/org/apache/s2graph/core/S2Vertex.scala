@@ -97,7 +97,9 @@ case class S2Vertex(graph: S2Graph,
   }
 
   override def toString(): String = {
-    Map("id" -> id.toString(), "ts" -> ts, "props" -> "", "op" -> op, "belongLabelIds" -> belongLabelIds).toString()
+    // V + L_BRACKET + vertex.id() + R_BRACKET;
+    // v[VertexId(1, 1481694411514)]
+    s"v[${id}]"
   }
 
   def toLogString(): String = {
@@ -182,7 +184,12 @@ case class S2Vertex(graph: S2Graph,
 
   override def remove(): Unit = ???
 
-  override def label(): String = service.serviceName + S2Vertex.VertexLabelDelimiter + serviceColumn.columnName
+  override def label(): String = {
+    if (serviceColumn.columnName == Vertex.DEFAULT_LABEL) Vertex.DEFAULT_LABEL // TP3 default vertex label name
+    else {
+      service.serviceName + S2Vertex.VertexLabelDelimiter + serviceColumn.columnName
+    }
+  }
 }
 
 object S2Vertex {

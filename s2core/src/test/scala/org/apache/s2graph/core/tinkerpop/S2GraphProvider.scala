@@ -9,7 +9,7 @@ import org.apache.s2graph.core._
 import org.apache.s2graph.core.mysqls.Label
 import org.apache.s2graph.core.types.HBaseType._
 import org.apache.tinkerpop.gremlin.LoadGraphWith.GraphData
-import org.apache.tinkerpop.gremlin.structure.{T, Graph}
+import org.apache.tinkerpop.gremlin.structure.{Element, Graph, T}
 import org.apache.tinkerpop.gremlin.{AbstractGraphProvider, LoadGraphWith}
 
 import scala.collection.JavaConverters._
@@ -94,6 +94,8 @@ class S2GraphProvider extends AbstractGraphProvider {
 
     super.loadGraphData(graph, loadGraphWith, testClass, testName)
   }
+
+  override def convertId(id: scala.Any, c: Class[_ <: Element]): AnyRef = super.convertId(id, c)
   //  override def loadGraphData(graph: Graph, loadGraphWith: LoadGraphWith, testClass: Class[_], testName: String): Unit = {
 //    /*
 //      -- from 1
