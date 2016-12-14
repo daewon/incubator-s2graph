@@ -26,9 +26,10 @@ import org.apache.s2graph.core.GraphExceptions.LabelNotExistException
 import org.apache.s2graph.core.S2Vertex.Props
 import org.apache.s2graph.core.mysqls.{ColumnMeta, LabelMeta, Service, ServiceColumn}
 import org.apache.s2graph.core.types._
+import org.apache.tinkerpop.gremlin.structure.Edge.Exceptions
 import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Direction, Edge, Vertex, VertexProperty}
+import org.apache.tinkerpop.gremlin.structure.{Direction, Edge, T, Vertex, VertexProperty}
 import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
@@ -154,6 +155,11 @@ case class S2Vertex(graph: S2Graph,
     vertex match {
       case otherV: S2Vertex =>
         val props = ElementHelper.asMap(kvs: _*).asScala.toMap
+
+        if (!graph.features().edge().supportsUserSuppliedIds() && props.contains(T.id.toString)) {
+          throw Exceptions.userSuppliedIdsNotSupported()
+        }
+
         //TODO: direction, operation, _timestamp need to be reserved property key.
         val direction = props.get("direction").getOrElse("out").toString
         val ts = props.get(LabelMeta.timestamp.name).map(_.toString.toLong).getOrElse(System.currentTimeMillis())

@@ -5,7 +5,7 @@ import org.apache.tinkerpop.gremlin.structure.Graph.Features
 class S2ElementFeatures extends Features.ElementFeatures {
   override def supportsStringIds(): Boolean = true
 
-  override def supportsCustomIds(): Boolean = true
+  override def supportsCustomIds(): Boolean = false
 
   override def supportsUuidIds(): Boolean = false
 
@@ -13,7 +13,7 @@ class S2ElementFeatures extends Features.ElementFeatures {
 
   override def supportsRemoveProperty(): Boolean = false
 
-  override def supportsUserSuppliedIds(): Boolean = true
+  override def supportsUserSuppliedIds(): Boolean = false
 
   override def supportsAnyIds(): Boolean = false
 
