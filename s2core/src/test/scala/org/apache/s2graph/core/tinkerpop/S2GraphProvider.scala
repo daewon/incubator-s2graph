@@ -10,11 +10,13 @@ import org.apache.s2graph.core._
 import org.apache.s2graph.core.mysqls.Label
 import org.apache.s2graph.core.types.HBaseType._
 import org.apache.tinkerpop.gremlin.LoadGraphWith.GraphData
-import org.apache.tinkerpop.gremlin.structure.{T, Graph}
+import org.apache.tinkerpop.gremlin.structure.{T, Element, Graph}
 import org.apache.tinkerpop.gremlin.{LoadGraphWith, AbstractGraphProvider}
 import scala.collection.JavaConverters._
 
 import com.typesafe.config.ConfigFactory
+
+import org.apache.s2graph.core.utils.logger
 
 object S2GraphProvider {
   val Implementation: Set[Class[_]] = Set(
@@ -39,17 +41,20 @@ class S2GraphProvider extends AbstractGraphProvider {
     m
   }
 
-  override def clear(graph: Graph, configuration: Configuration): Unit = {
+  override def clear(graph: Graph, configuration: Configuration): Unit =
     if (graph != null) {
       val s2Graph = graph.asInstanceOf[S2Graph]
-      val labels = Label.findAll()
-      labels.groupBy(_.hbaseTableName).values.foreach { labelsWithSameTable =>
-        labelsWithSameTable.headOption.foreach { label =>
-          s2Graph.management.deleteStorage(label.label)
+      if (s2Graph.isRunning) {
+        val labels = Label.findAll()
+        labels.groupBy(_.hbaseTableName).values.foreach { labelsWithSameTable =>
+          labelsWithSameTable.headOption.foreach { label =>
+            s2Graph.management.deleteStorage(label.label)
+          }
         }
+        s2Graph.shutdown()
+        logger.info(s"S2Graph Shutdown")
       }
     }
-  }
 
   override def getImplementations: util.Set[Class[_]] = S2GraphProvider.Implementation.asJava
 
@@ -100,6 +105,8 @@ class S2GraphProvider extends AbstractGraphProvider {
 
     super.loadGraphData(graph, loadGraphWith, testClass, testName)
   }
+
+  override def convertId(id: scala.Any, c: Class[_ <: Element]): AnyRef = super.convertId(id, c)
   //  override def loadGraphData(graph: Graph, loadGraphWith: LoadGraphWith, testClass: Class[_], testName: String): Unit = {
 //    /*
 //      -- from 1

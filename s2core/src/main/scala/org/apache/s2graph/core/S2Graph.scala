@@ -20,30 +20,31 @@
 package org.apache.s2graph.core
 
 import java.util
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.typesafe.config.{Config, ConfigFactory}
-import org.apache.commons.configuration.{BaseConfiguration, Configuration}
-import org.apache.s2graph.core.GraphExceptions.{FetchTimeoutException, LabelNotExistException}
+import com.typesafe.config.{ConfigFactory, Config}
+import org.apache.commons.configuration.{Configuration, BaseConfiguration}
+
+import org.apache.s2graph.core.GraphExceptions.{LabelNotExistException, FetchTimeoutException}
 import org.apache.s2graph.core.JSONParser._
 import org.apache.s2graph.core.mysqls._
 import org.apache.s2graph.core.storage.hbase.AsynchbaseStorage
 import org.apache.s2graph.core.storage.{SKeyValue, Storage}
 import org.apache.s2graph.core.types._
-import org.apache.s2graph.core.utils.{DeferCache, Extensions, logger}
+import org.apache.s2graph.core.utils.{DeferCache, logger, Extensions}
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
 import org.apache.tinkerpop.gremlin.structure
 import org.apache.tinkerpop.gremlin.structure.Graph.Features.EdgeFeatures
 import org.apache.tinkerpop.gremlin.structure.Graph.{Features, Variables}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Edge, Graph, T, Transaction}
-import play.api.libs.json.{JsObject, Json}
-
+import org.apache.tinkerpop.gremlin.structure.{T, Transaction, Graph, Edge}
+import play.api.libs.json.{Json, JsObject}
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.{ListBuffer, ArrayBuffer}
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.util.{Random, Try}
@@ -529,14 +530,48 @@ object S2Graph {
     }
     results
   }
-
 }
 
-
 @Graph.OptIn(Graph.OptIn.SUITE_STRUCTURE_STANDARD)
+@Graph.OptOuts(value = Array(
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.FeatureSupportTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.SerializationTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphConstructionTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.TransactionTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VariablesTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
+
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoCustomTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoEdgeTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoGraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoVertexTest", method="*", reason="no"),
+
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedGraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedVertexPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedVertexTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedEdgeTest", method="*", reason="no"),
+
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceEdgeTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceGraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceVertexPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceVertexTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.star.StarGraphTest", method="*", reason="no"),
+
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.algorithm.generator.CommunityGeneratorTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.algorithm.generator.DistributionGeneratorTest", method="*", reason="no")
+))
 class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph {
 
   import S2Graph._
+
+  private val running = new AtomicBoolean(true)
 
   val config = _config.withFallback(S2Graph.DefaultConfig)
 
@@ -611,7 +646,7 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
 
   /* TODO */
   val DefaultService = management.createService("_s2graph", "localhost", "s2graph", 0, None).get
-  val DefaultColumn = ServiceColumn.findOrInsert(DefaultService.id.get, "_vertex", Some("integer"), HBaseType.DEFAULT_VERSION)
+  val DefaultColumn = ServiceColumn.findOrInsert(DefaultService.id.get, "vertex", Some("integer"), HBaseType.DEFAULT_VERSION)
   val DefaultColumnMetas = {
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "name", "string")
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "age", "integer")
@@ -1103,10 +1138,12 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     storage.writeToStorage(edge.innerLabel.service.cluster, kvs, withWait = true)
   }
 
-  def shutdown(): Unit = {
-    flushStorage()
-    Model.shutdown()
-  }
+  def isRunning(): Boolean = running.get()
+  def shutdown(): Unit =
+    if (running.compareAndSet(true, false)) {
+      flushStorage()
+      Model.shutdown()
+    }
 
   def toGraphElement(s: String, labelMapping: Map[String, String] = Map.empty): Option[GraphElement] = Try {
     val parts = GraphUtil.split(s)
@@ -1447,8 +1484,6 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     }
   }
   override def tx(): Transaction = ???
-
-
 
   override def variables(): Variables = ???
 
