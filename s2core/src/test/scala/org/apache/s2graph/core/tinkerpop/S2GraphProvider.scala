@@ -64,7 +64,21 @@ class S2GraphProvider extends AbstractGraphProvider {
       true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "double")), "strong", None, None)
 
     val knows = mnt.createLabel("knows", service.serviceName, "person", "integer", service.serviceName, "person", "integer",
-      true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "double"), Prop("data", "-", "string"), Prop("year", "-1", "integer"), Prop("boolean", "false", "boolean")), "strong", None, None)
+      true, service.serviceName, Nil,
+      Seq(
+        Prop("weight", "0.0", "double"),
+        Prop("data", "-", "string"),
+        Prop("year", "-1", "integer"),
+        Prop("boolean", "false", "boolean"),
+        Prop("float", "0.0", "float"),
+        Prop("double", "0.0", "double"),
+        Prop("long", "0.0", "long"),
+        Prop("string", "-", "string"),
+        Prop("integer", "-", "integer")
+      ),
+      "strong",
+      None,
+      None)
 
     val bought = mnt.createLabel("bought", service.serviceName, "person", "integer", service.serviceName, "product", "integer",
       true, service.serviceName, Nil, Seq(Prop("x", "-", "string"), Prop("y", "-", "string")), "strong", None, None)
@@ -73,7 +87,10 @@ class S2GraphProvider extends AbstractGraphProvider {
       true, service.serviceName, Nil, Seq(Prop("xxx", "-", "string")), "weak", None, None)
 
     val self = mnt.createLabel("self", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Seq(Prop("xxx", "-", "string")), "weak", None, None)
+      true, service.serviceName, Nil, Nil, "weak", None, None)
+
+    val friends = mnt.createLabel("friends", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
+      true, service.serviceName, Nil, Nil, "weak", None, None)
 
     super.loadGraphData(graph, loadGraphWith, testClass, testName)
   }
