@@ -47,9 +47,11 @@ case class S2Property[V](element: S2Edge,
     innerValWithTs.bytes
   }
 
-  override def isPresent: Boolean = ???
+  @volatile var isRemoved = false
 
-  override def remove(): Unit = ???
+  override def isPresent: Boolean = !isRemoved
+
+  override def remove(): Unit = isRemoved = true
 
   override def hashCode(): Int = {
     MurmurHash3.stringHash(labelMeta.labelId + "," + labelMeta.id.get + "," + key + "," + value + "," + ts)

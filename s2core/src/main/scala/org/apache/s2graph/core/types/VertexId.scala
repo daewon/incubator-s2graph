@@ -67,8 +67,8 @@ class VertexId (val column: ServiceColumn, val innerId: InnerValLike) extends HB
   def bytes: Array[Byte] = Bytes.add(hashBytes, innerId.bytes, colIdBytes)
 
   override def toString(): String = {
-    column.id.get.toString() + "," + innerId.toString()
-//    s"VertexId($colId, $innerId)"
+//    column.id.get.toString() + "," + innerId.toString()
+    s"VertexId($colId, $innerId)"
   }
 
   override def hashCode(): Int = {
@@ -96,6 +96,7 @@ class VertexId (val column: ServiceColumn, val innerId: InnerValLike) extends HB
   def <=(other: VertexId): Boolean = compareTo(other) <= 0
   def >(other: VertexId): Boolean = compareTo(other) > 0
   def >=(other: VertexId): Boolean = compareTo(other) >= 0
+
 }
 
 object SourceVertexId extends HBaseDeserializable {

@@ -149,8 +149,6 @@ case class S2Vertex(graph: S2Graph,
   }
 
   override def addEdge(label: String, vertex: Vertex, kvs: AnyRef*): Edge = {
-//    if (label == "systemLabel") throw new java.lang.IllegalArgumentException
-
     vertex match {
       case otherV: S2Vertex =>
         val props = ElementHelper.asMap(kvs: _*).asScala.toMap
@@ -164,6 +162,7 @@ case class S2Vertex(graph: S2Graph,
         } catch {
           case e: LabelNotExistException => throw new java.lang.IllegalArgumentException
          }
+      case null => throw new java.lang.IllegalArgumentException
       case _ => throw new RuntimeException("only S2Graph vertex can be used.")
     }
   }

@@ -20,7 +20,7 @@
 package org.apache.s2graph.core
 
 import java.util
-import java.util.function.{Consumer, BiConsumer}
+import java.util.function.{BiConsumer, Consumer}
 
 import org.apache.s2graph.core.S2Edge.{Props, State}
 import org.apache.s2graph.core.JSONParser._
@@ -28,7 +28,8 @@ import org.apache.s2graph.core.mysqls.{Label, LabelIndex, LabelMeta}
 import org.apache.s2graph.core.types._
 import org.apache.s2graph.core.utils.logger
 import org.apache.tinkerpop.gremlin.structure
-import org.apache.tinkerpop.gremlin.structure.{Edge, Graph, Vertex, Direction, Property}
+import org.apache.tinkerpop.gremlin.structure.util.StringFactory
+import org.apache.tinkerpop.gremlin.structure.{Direction, Edge, Graph, Property, Vertex}
 import play.api.libs.json.{JsNumber, JsObject, Json}
 
 import scala.collection.JavaConverters._
@@ -473,15 +474,20 @@ case class S2Edge(innerGraph: S2Graph,
   }
 
   override def equals(other: Any): Boolean = other match {
-    case e: Edge => e.id().equals(e.id())
+    case e: Edge => id().equals(e.id())
     case _ => false
   }
 
-  override def toString(): String = {
-    Map("srcVertex" -> srcVertex.toString, "tgtVertex" -> tgtVertex.toString, "label" -> labelName, "direction" -> direction,
-      "operation" -> operation, "version" -> version, "props" -> propsWithTs.asScala.map(kv => kv._1 -> kv._2.value).toString,
-      "parentEdges" -> parentEdges, "originalEdge" -> originalEdgeOpt, "statusCode" -> statusCode, "lockTs" -> lockTs
-    ).toString
+//  override def toString(): String = {
+//    Map("srcVertex" -> srcVertex.toString, "tgtVertex" -> tgtVertex.toString, "label" -> labelName, "direction" -> direction,
+//      "operation" -> operation, "version" -> version, "props" -> propsWithTs.asScala.map(kv => kv._1 -> kv._2.value).toString,
+//      "parentEdges" -> parentEdges, "originalEdge" -> originalEdgeOpt, "statusCode" -> statusCode, "lockTs" -> lockTs
+//    ).toString
+//  }
+
+  override def toString: String = {
+    // E + L_BRACKET + edge.id() + R_BRACKET + L_BRACKET + edge.outVertex().id() + DASH + edge.label() + ARROW + edge.inVertex().id() + R_BRACKET;
+    s"e[${id}][${srcForVertex.id}-${innerLabel.label}->${tgtForVertex.id}]"
   }
 
   def checkProperty(key: String): Boolean = propsWithTs.containsKey(key)
