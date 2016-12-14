@@ -20,31 +20,30 @@
 package org.apache.s2graph.core
 
 import java.util
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.typesafe.config.{ConfigFactory, Config}
-import org.apache.commons.configuration.{Configuration, BaseConfiguration}
-
-import org.apache.s2graph.core.GraphExceptions.{LabelNotExistException, FetchTimeoutException}
+import com.typesafe.config.{Config, ConfigFactory}
+import org.apache.commons.configuration.{BaseConfiguration, Configuration}
+import org.apache.s2graph.core.GraphExceptions.{FetchTimeoutException, LabelNotExistException}
 import org.apache.s2graph.core.JSONParser._
 import org.apache.s2graph.core.mysqls._
 import org.apache.s2graph.core.storage.hbase.AsynchbaseStorage
 import org.apache.s2graph.core.storage.{SKeyValue, Storage}
 import org.apache.s2graph.core.types._
-import org.apache.s2graph.core.utils.{DeferCache, logger, Extensions}
+import org.apache.s2graph.core.utils.{DeferCache, Extensions, logger}
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
 import org.apache.tinkerpop.gremlin.structure
 import org.apache.tinkerpop.gremlin.structure.Graph.Features.EdgeFeatures
 import org.apache.tinkerpop.gremlin.structure.Graph.{Features, Variables}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{T, Transaction, Graph, Edge}
-import play.api.libs.json.{Json, JsObject}
+import org.apache.tinkerpop.gremlin.structure.{Edge, Graph, T, Transaction, Vertex}
+import play.api.libs.json.{JsObject, Json}
+
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.{ListBuffer, ArrayBuffer}
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.util.{Random, Try}
@@ -538,12 +537,12 @@ object S2Graph {
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.SerializationTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphConstructionTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.TransactionTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VariablesTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"),
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
 
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoCustomTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoEdgeTest", method="*", reason="no"),
@@ -570,8 +569,6 @@ object S2Graph {
 class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph {
 
   import S2Graph._
-
-  private val running = new AtomicBoolean(true)
 
   val config = _config.withFallback(S2Graph.DefaultConfig)
 
@@ -655,6 +652,12 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "communityIndex", "integer")
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "test", "string")
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "testing", "string")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "string", "string")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "boolean", "boolean")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "long", "long")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "float", "float")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "double", "double")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "integer", "integer")
   }
 
   val DefaultLabel = management.createLabel("_s2graph", DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType,
@@ -1138,12 +1141,10 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     storage.writeToStorage(edge.innerLabel.service.cluster, kvs, withWait = true)
   }
 
-  def isRunning(): Boolean = running.get()
-  def shutdown(): Unit =
-    if (running.compareAndSet(true, false)) {
-      flushStorage()
-      Model.shutdown()
-    }
+  def shutdown(): Unit = {
+    flushStorage()
+    Model.shutdown()
+  }
 
   def toGraphElement(s: String, labelMapping: Map[String, String] = Map.empty): Option[GraphElement] = Try {
     val parts = GraphUtil.split(s)
@@ -1232,11 +1233,15 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
                ts: Long = System.currentTimeMillis(),
                operation: String = "insert"): S2Vertex = {
 
-    val service = Service.findByName(serviceName).getOrElse(throw new RuntimeException(s"$serviceName is not found."))
-    val column = ServiceColumn.find(service.id.get, columnName).getOrElse(throw new RuntimeException(s"$columnName is not found."))
+    val service = Service.findByName(serviceName).getOrElse(throw new java.lang.IllegalArgumentException(s"$serviceName is not found."))
+    val column = ServiceColumn.find(service.id.get, columnName).getOrElse(throw new java.lang.IllegalArgumentException(s"$columnName is not found."))
     val op = GraphUtil.toOp(operation).getOrElse(throw new RuntimeException(s"$operation is not supported."))
 
-    val srcVertexId = VertexId(column, toInnerVal(id, column.columnType, column.schemaVersion))
+    val srcVertexId = id match {
+      case vid: VertexId => id.asInstanceOf[VertexId]
+      case _ => VertexId(column, toInnerVal(id, column.columnType, column.schemaVersion))
+    }
+
     val propsInner = column.propsToInnerVals(props) ++
       Map(ColumnMeta.timestamp -> InnerVal.withLong(ts, column.schemaVersion))
 
@@ -1490,15 +1495,22 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   override def configuration(): Configuration = ???
 
   override def addVertex(kvs: AnyRef*): structure.Vertex = {
+    if (kvs.contains(null)) {
+      throw new java.lang.IllegalArgumentException
+    }
+
     val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
     val id = kvsMap.getOrElse(T.id.toString, System.currentTimeMillis())
     val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
+
+
     val names = serviceColumnNames.split(S2Vertex.VertexLabelDelimiter)
     val (serviceName, columnName) =
       if (names.length == 1) (DefaultService.serviceName, names(0))
       else throw new RuntimeException("malformed data on vertex label.")
 
     val vertex = toVertex(serviceName, columnName, id, kvsMap)
+
     val future = mutateVertices(Seq(vertex), withWait = true).map { vs =>
       if (vs.forall(identity)) vertex
       else throw new RuntimeException("addVertex failed.")
