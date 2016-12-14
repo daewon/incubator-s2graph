@@ -516,6 +516,32 @@ class AsynchbaseStorage(override val graph: S2Graph,
     }
   }
 
+  override def truncateTable(zkAddr: String, tableNameStr: String): Unit = {
+    val admin = getAdmin(zkAddr)
+    val tableName = TableName.valueOf(tableNameStr)
+    if (!admin.tableExists(tableName)) {
+      return
+    }
+    if (admin.isTableEnabled(tableName)) {
+      admin.disableTable(tableName)
+    }
+    admin.truncateTable(tableName, true)
+    admin.enableTable(tableName)
+    admin.close()
+  }
+
+  override def deleteTable(zkAddr: String, tableNameStr: String): Unit = {
+    val admin = getAdmin(zkAddr)
+    val tableName = TableName.valueOf(tableNameStr)
+    if (!admin.tableExists(tableName)) {
+      return
+    }
+    if (admin.isTableEnabled(tableName)) {
+      admin.disableTable(tableName)
+    }
+    admin.deleteTable(tableName)
+    admin.close()
+  }
 
   /** Asynchbase implementation override default getVertices to use future Cache */
   override def getVertices(vertices: Seq[S2Vertex]): Future[Seq[S2Vertex]] = {

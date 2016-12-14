@@ -45,7 +45,7 @@ class S2GraphProvider extends AbstractGraphProvider {
       val labels = Label.findAll()
       labels.groupBy(_.hbaseTableName).values.foreach { labelsWithSameTable =>
         labelsWithSameTable.headOption.foreach { label =>
-//          s2Graph.management.truncateStorage(label.label)
+          s2Graph.management.deleteStorage(label.label)
         }
       }
     }

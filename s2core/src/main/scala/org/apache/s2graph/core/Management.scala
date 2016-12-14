@@ -355,5 +355,24 @@ class Management(graph: S2Graph) {
     storage.info
   }
 
+  def truncateStorage(labelName: String): Unit = {
+    Try(Label.findByName(labelName, useCache = false)).map { labelOpt =>
+      labelOpt.map { label =>
+        val storage = graph.getStorage(label)
+        val zkAddr = label.service.cluster
+        storage.truncateTable(zkAddr, label.hbaseTableName)
+      }
+    }
+  }
+
+  def deleteStorage(labelName: String): Unit = {
+    Try(Label.findByName(labelName, useCache = false)).map { labelOpt =>
+      labelOpt.map { label =>
+        val storage = graph.getStorage(label)
+        val zkAddr = label.service.cluster
+        storage.deleteTable(zkAddr, label.hbaseTableName)
+      }
+    }
+  }
 }
 

@@ -266,9 +266,9 @@ abstract class Storage[Q, R](val graph: S2Graph,
                   replicationScopeOpt: Option[Int] = None,
                   totalRegionCount: Option[Int] = None): Unit
 
+  def truncateTable(zkAddr: String, tableNameStr: String): Unit = {}
 
-
-
+  def deleteTable(zkAddr: String, tableNameStr: String): Unit = {}
 
   /** Public Interface */
   def getVertices(vertices: Seq[S2Vertex]): Future[Seq[S2Vertex]] = {
@@ -1130,4 +1130,6 @@ abstract class Storage[Q, R](val graph: S2Graph,
   }
 
   def info: Map[String, String] = Map("className" -> this.getClass.getSimpleName)
+
+
 }
