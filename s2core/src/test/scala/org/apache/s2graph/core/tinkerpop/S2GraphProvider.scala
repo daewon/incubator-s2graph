@@ -6,13 +6,16 @@ import java.util
 import org.apache.commons.configuration.Configuration
 import org.apache.s2graph.core.Management.JsonModel.Prop
 import org.apache.s2graph.core._
-import org.apache.s2graph.core.mysqls.Label
+import org.apache.s2graph.core.mysqls.{Label, ServiceColumn}
 import org.apache.s2graph.core.types.HBaseType._
+import org.apache.s2graph.core.types.{HBaseType, InnerVal, VertexId}
 import org.apache.tinkerpop.gremlin.LoadGraphWith.GraphData
-import org.apache.tinkerpop.gremlin.structure.{Element, Graph, T}
+import org.apache.tinkerpop.gremlin.structure.{Edge, Element, Graph, T}
 import org.apache.tinkerpop.gremlin.{AbstractGraphProvider, LoadGraphWith}
+import sun.security.provider.certpath.Vertex
 
 import scala.collection.JavaConverters._
+import scala.util.Random
 
 object S2GraphProvider {
   val Implementation: Set[Class[_]] = Set(
@@ -95,7 +98,20 @@ class S2GraphProvider extends AbstractGraphProvider {
     super.loadGraphData(graph, loadGraphWith, testClass, testName)
   }
 
-  override def convertId(id: scala.Any, c: Class[_ <: Element]): AnyRef = super.convertId(id, c)
+  override def convertId(id: scala.Any, c: Class[_ <: Element]): AnyRef = {
+    val isVertex = c.toString.contains("Vertex")
+    if (isVertex) {
+      VertexId(ServiceColumn.findAll().head, InnerVal.withStr(id.toString, HBaseType.DEFAULT_VERSION))
+    } else {
+      EdgeId(
+        InnerVal.withStr(id.toString, HBaseType.DEFAULT_VERSION),
+        InnerVal.withStr(id.toString, HBaseType.DEFAULT_VERSION),
+        "_s2graph",
+        "out",
+        System.currentTimeMillis()
+      )
+    }
+  }
   //  override def loadGraphData(graph: Graph, loadGraphWith: LoadGraphWith, testClass: Class[_], testName: String): Unit = {
 //    /*
 //      -- from 1

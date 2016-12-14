@@ -36,7 +36,7 @@ import org.apache.tinkerpop.gremlin.structure
 import org.apache.tinkerpop.gremlin.structure.Graph.Features.EdgeFeatures
 import org.apache.tinkerpop.gremlin.structure.Graph.{Features, Variables}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Edge, Graph, T, Transaction}
+import org.apache.tinkerpop.gremlin.structure.{Edge, Graph, T, Transaction, Vertex}
 import play.api.libs.json.{JsObject, Json}
 
 import scala.annotation.tailrec
@@ -652,6 +652,12 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "communityIndex", "integer")
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "test", "string")
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "testing", "string")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "string", "string")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "boolean", "boolean")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "long", "long")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "float", "float")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "double", "double")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "integer", "integer")
   }
 
   val DefaultLabel = management.createLabel("_s2graph", DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType,
@@ -1227,11 +1233,15 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
                ts: Long = System.currentTimeMillis(),
                operation: String = "insert"): S2Vertex = {
 
-    val service = Service.findByName(serviceName).getOrElse(throw new RuntimeException(s"$serviceName is not found."))
-    val column = ServiceColumn.find(service.id.get, columnName).getOrElse(throw new RuntimeException(s"$columnName is not found."))
+    val service = Service.findByName(serviceName).getOrElse(throw new java.lang.IllegalArgumentException(s"$serviceName is not found."))
+    val column = ServiceColumn.find(service.id.get, columnName).getOrElse(throw new java.lang.IllegalArgumentException(s"$columnName is not found."))
     val op = GraphUtil.toOp(operation).getOrElse(throw new RuntimeException(s"$operation is not supported."))
 
-    val srcVertexId = VertexId(column, toInnerVal(id, column.columnType, column.schemaVersion))
+    val srcVertexId = id match {
+      case vid: VertexId => id.asInstanceOf[VertexId]
+      case _ => VertexId(column, toInnerVal(id, column.columnType, column.schemaVersion))
+    }
+
     val propsInner = column.propsToInnerVals(props) ++
       Map(ColumnMeta.timestamp -> InnerVal.withLong(ts, column.schemaVersion))
 
@@ -1485,15 +1495,22 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   override def configuration(): Configuration = ???
 
   override def addVertex(kvs: AnyRef*): structure.Vertex = {
+    if (kvs.contains(null)) {
+      throw new java.lang.IllegalArgumentException
+    }
+
     val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
     val id = kvsMap.getOrElse(T.id.toString, System.currentTimeMillis())
     val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
+
+
     val names = serviceColumnNames.split(S2Vertex.VertexLabelDelimiter)
     val (serviceName, columnName) =
       if (names.length == 1) (DefaultService.serviceName, names(0))
       else throw new RuntimeException("malformed data on vertex label.")
 
     val vertex = toVertex(serviceName, columnName, id, kvsMap)
+
     val future = mutateVertices(Seq(vertex), withWait = true).map { vs =>
       if (vs.forall(identity)) vertex
       else throw new RuntimeException("addVertex failed.")

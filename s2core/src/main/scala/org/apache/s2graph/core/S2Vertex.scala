@@ -88,7 +88,7 @@ case class S2Vertex(graph: S2Graph,
 
   override def equals(obj: Any) = {
     obj match {
-      case otherVertex: S2Vertex =>
+      case otherVertex: Vertex =>
         val ret = id == otherVertex.id
         //        logger.debug(s"Vertex.equals: $this, $obj => $ret")
         ret
@@ -185,10 +185,11 @@ case class S2Vertex(graph: S2Graph,
   override def remove(): Unit = ???
 
   override def label(): String = {
-    if (serviceColumn.columnName == Vertex.DEFAULT_LABEL) Vertex.DEFAULT_LABEL // TP3 default vertex label name
-    else {
-      service.serviceName + S2Vertex.VertexLabelDelimiter + serviceColumn.columnName
-    }
+    serviceColumn.columnName
+//    if (serviceColumn.columnName == Vertex.DEFAULT_LABEL) Vertex.DEFAULT_LABEL // TP3 default vertex label name
+//    else {
+//      service.serviceName + S2Vertex.VertexLabelDelimiter + serviceColumn.columnName
+//    }
   }
 }
 

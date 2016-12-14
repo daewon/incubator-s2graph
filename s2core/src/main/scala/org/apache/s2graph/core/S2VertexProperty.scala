@@ -44,11 +44,13 @@ case class S2VertexProperty[V](element: S2Vertex,
 
   override def property[V](key: String, value: V): Property[V] = ???
 
-  override def remove(): Unit = ???
+  override def remove(): Unit = isRemoved = true
 
   override def id(): AnyRef = ???
 
-  override def isPresent: Boolean = ???
+  @volatile var isRemoved = false
+
+  override def isPresent: Boolean = !isRemoved
 
   override def hashCode(): Int = {
     MurmurHash3.stringHash(columnMeta.columnId + "," + columnMeta.id.get + "," + key + "," + value)
