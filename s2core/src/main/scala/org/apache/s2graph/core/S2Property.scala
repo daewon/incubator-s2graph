@@ -66,7 +66,9 @@ case class S2Property[V](element: S2Edge,
   }
 
   override def toString(): String = {
-    Map("labelMeta" -> labelMeta.toString, "key" -> key, "value" -> value, "ts" -> ts).toString
+//    Map("labelMeta" -> labelMeta.toString, "key" -> key, "value" -> value, "ts" -> ts).toString
+    // vp[name->marko]
+    s"p[${key}->${value}]"
   }
 
 }

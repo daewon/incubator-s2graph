@@ -545,7 +545,7 @@ case class S2Edge(innerGraph: S2Graph,
   }
 
   override def property[V](key: String): Property[V] = {
-    val labelMeta = innerLabel.metaPropsInvMap.getOrElse(key, throw new RuntimeException(s"$key is not configured on Edge."))
+    val labelMeta = innerLabel.metaPropsInvMap.getOrElse(key, throw new java.lang.IllegalStateException(s"$key is not configured on Edge."))
     if (propsWithTs.containsKey(key)) propsWithTs.get(key).asInstanceOf[Property[V]]
     else {
       val default = innerLabel.metaPropsDefaultMapInner(labelMeta)
@@ -554,6 +554,11 @@ case class S2Edge(innerGraph: S2Graph,
   }
 
   override def property[V](key: String, value: V): Property[V] = {
+    if (key == null) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
+    if (value == null) throw Property.Exceptions.propertyValueCanNotBeNull()
+    if (key.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
+    if (Graph.Hidden.isHidden(key)) throw Property.Exceptions.propertyKeyCanNotBeAHiddenKey(Graph.Hidden.hide(key))
+
     property(key, value, System.currentTimeMillis())
   }
 
