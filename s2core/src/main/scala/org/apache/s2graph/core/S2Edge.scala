@@ -487,7 +487,7 @@ case class S2Edge(innerGraph: S2Graph,
 
   override def toString: String = {
     // E + L_BRACKET + edge.id() + R_BRACKET + L_BRACKET + edge.outVertex().id() + DASH + edge.label() + ARROW + edge.inVertex().id() + R_BRACKET;
-    s"e[${id}][${srcForVertex.id}-${innerLabel.label}->${tgtForVertex.id}]"
+    s"e[${id}][${srcVertex.id}-${innerLabel.label}->${tgtVertex.id}]"
   }
 
   def checkProperty(key: String): Boolean = propsWithTs.containsKey(key)
