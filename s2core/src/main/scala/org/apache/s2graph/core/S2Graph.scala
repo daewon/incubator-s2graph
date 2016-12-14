@@ -529,11 +529,39 @@ object S2Graph {
     }
     results
   }
-
 }
 
-
 @Graph.OptIn(Graph.OptIn.SUITE_STRUCTURE_STANDARD)
+@Graph.OptOuts(value = Array(
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.FeatureSupportTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.SerializationTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphConstructionTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.TransactionTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VariablesTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoCustomTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoEdgeTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoGraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoVertexTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedGraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedVertexPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedVertexTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedEdgeTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceEdgeTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceGraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceVertexPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceVertexTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.star.StarGraphTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.algorithm.generator.CommunityGeneratorTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.algorithm.generator.DistributionGeneratorTest", method="*", reason="no")
+))
 class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph {
 
   import S2Graph._
@@ -1447,8 +1475,6 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     }
   }
   override def tx(): Transaction = ???
-
-
 
   override def variables(): Variables = ???
 

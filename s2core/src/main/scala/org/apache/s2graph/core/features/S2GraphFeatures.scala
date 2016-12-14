@@ -7,11 +7,11 @@ import org.apache.tinkerpop.gremlin.structure.Graph.Features.GraphFeatures
 class S2GraphFeatures extends GraphFeatures {
   override def supportsComputer(): Boolean = false
 
-  override def supportsThreadedTransactions(): Boolean = true
+  override def supportsThreadedTransactions(): Boolean = false
 
-  override def supportsTransactions(): Boolean = true
+  override def supportsTransactions(): Boolean = false
 
-  override def supportsPersistence(): Boolean = false
+  override def supportsPersistence(): Boolean = true
 
   override def variables(): Features.VariableFeatures = super.variables()
 
