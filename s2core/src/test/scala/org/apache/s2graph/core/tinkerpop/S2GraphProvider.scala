@@ -4,18 +4,22 @@ import java.io.File
 import java.util
 
 import org.apache.commons.configuration.Configuration
+
 import org.apache.s2graph.core.Management.JsonModel.Prop
 import org.apache.s2graph.core._
 import org.apache.s2graph.core.mysqls.{Label, ServiceColumn}
 import org.apache.s2graph.core.types.HBaseType._
-import org.apache.s2graph.core.types.{HBaseType, InnerVal, VertexId}
+import org.apache.s2graph.core.types.{VertexId, HBaseType, InnerVal}
 import org.apache.tinkerpop.gremlin.LoadGraphWith.GraphData
-import org.apache.tinkerpop.gremlin.structure.{Edge, Element, Graph, T}
-import org.apache.tinkerpop.gremlin.{AbstractGraphProvider, LoadGraphWith}
+import org.apache.tinkerpop.gremlin.structure.{T, Element, Graph, Edge}
+import org.apache.tinkerpop.gremlin.{LoadGraphWith, AbstractGraphProvider}
 import sun.security.provider.certpath.Vertex
-
 import scala.collection.JavaConverters._
 import scala.util.Random
+
+import com.typesafe.config.ConfigFactory
+
+import org.apache.s2graph.core.utils.logger
 
 object S2GraphProvider {
   val Implementation: Set[Class[_]] = Set(
@@ -29,24 +33,31 @@ object S2GraphProvider {
 class S2GraphProvider extends AbstractGraphProvider {
 
   override def getBaseConfiguration(s: String, aClass: Class[_], s1: String, graphData: GraphData): util.Map[String, AnyRef] = {
+    val config = ConfigFactory.load()
+    val dbUrl =
+      if (config.hasPath("db.default.url")) config.getString("db.default.url")
+      else "jdbc:mysql://default:3306/graph_dev"
     val m = new java.util.HashMap[String, AnyRef]()
     m.put(Graph.GRAPH, classOf[S2Graph].getName)
-    m.put("db.default.url", "jdbc:mysql://default:3306/graph_dev")
+    m.put("db.default.url", dbUrl)
     m.put("db.default.driver", "com.mysql.jdbc.Driver")
     m
   }
 
-  override def clear(graph: Graph, configuration: Configuration): Unit = {
+  override def clear(graph: Graph, configuration: Configuration): Unit =
     if (graph != null) {
       val s2Graph = graph.asInstanceOf[S2Graph]
-      val labels = Label.findAll()
-      labels.groupBy(_.hbaseTableName).values.foreach { labelsWithSameTable =>
-        labelsWithSameTable.headOption.foreach { label =>
-//          s2Graph.management.truncateStorage(label.label)
+      if (s2Graph.isRunning) {
+        val labels = Label.findAll()
+        labels.groupBy(_.hbaseTableName).values.foreach { labelsWithSameTable =>
+          labelsWithSameTable.headOption.foreach { label =>
+            s2Graph.management.deleteStorage(label.label)
+          }
         }
+        s2Graph.shutdown()
+        logger.info(s"S2Graph Shutdown")
       }
     }
-  }
 
   override def getImplementations: util.Set[Class[_]] = S2GraphProvider.Implementation.asJava
 

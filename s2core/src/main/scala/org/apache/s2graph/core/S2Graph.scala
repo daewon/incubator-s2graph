@@ -20,30 +20,31 @@
 package org.apache.s2graph.core
 
 import java.util
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.typesafe.config.{Config, ConfigFactory}
-import org.apache.commons.configuration.{BaseConfiguration, Configuration}
-import org.apache.s2graph.core.GraphExceptions.{FetchTimeoutException, LabelNotExistException}
+import com.typesafe.config.{ConfigFactory, Config}
+import org.apache.commons.configuration.{Configuration, BaseConfiguration}
+
+import org.apache.s2graph.core.GraphExceptions.{LabelNotExistException, FetchTimeoutException}
 import org.apache.s2graph.core.JSONParser._
 import org.apache.s2graph.core.mysqls._
 import org.apache.s2graph.core.storage.hbase.AsynchbaseStorage
 import org.apache.s2graph.core.storage.{SKeyValue, Storage}
 import org.apache.s2graph.core.types._
-import org.apache.s2graph.core.utils.{DeferCache, Extensions, logger}
+import org.apache.s2graph.core.utils.{DeferCache, logger, Extensions}
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
 import org.apache.tinkerpop.gremlin.structure
 import org.apache.tinkerpop.gremlin.structure.Graph.Features.EdgeFeatures
 import org.apache.tinkerpop.gremlin.structure.Graph.{Features, Variables}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Edge, Graph, T, Transaction, Vertex}
-import play.api.libs.json.{JsObject, Json}
-
+import org.apache.tinkerpop.gremlin.structure.{Transaction, T, Graph, Vertex, Edge}
+import play.api.libs.json.{Json, JsObject}
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.{ListBuffer, ArrayBuffer}
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.util.{Random, Try}
@@ -569,6 +570,8 @@ object S2Graph {
 class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph {
 
   import S2Graph._
+
+  private val running = new AtomicBoolean(true)
 
   val config = _config.withFallback(S2Graph.DefaultConfig)
 
@@ -1141,10 +1144,12 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     storage.writeToStorage(edge.innerLabel.service.cluster, kvs, withWait = true)
   }
 
-  def shutdown(): Unit = {
-    flushStorage()
-    Model.shutdown()
-  }
+  def isRunning(): Boolean = running.get()
+  def shutdown(): Unit =
+    if (running.compareAndSet(true, false)) {
+      flushStorage()
+      Model.shutdown()
+    }
 
   def toGraphElement(s: String, labelMapping: Map[String, String] = Map.empty): Option[GraphElement] = Try {
     val parts = GraphUtil.split(s)
