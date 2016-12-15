@@ -88,7 +88,8 @@ class S2GraphProvider extends AbstractGraphProvider {
         Prop("double", "0.0", "double"),
         Prop("long", "0.0", "long"),
         Prop("string", "-", "string"),
-        Prop("integer", "-", "integer")
+        Prop("integer", "-", "integer"),
+        Prop("aKey", "", "string")
       ),
       "strong",
       None,

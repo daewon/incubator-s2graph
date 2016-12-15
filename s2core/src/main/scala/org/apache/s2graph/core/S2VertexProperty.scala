@@ -65,6 +65,7 @@ case class S2VertexProperty[V](element: S2Vertex,
   }
 
   override def toString(): String = {
-    Map("columnMeta" -> columnMeta.toString, "key" -> key, "value" -> value).toString
+//    Map("columnMeta" -> columnMeta.toString, "key" -> key, "value" -> value).toString
+    s"vp[${key}->${value}]"
   }
 }

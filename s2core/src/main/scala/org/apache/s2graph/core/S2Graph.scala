@@ -40,6 +40,9 @@ import org.apache.tinkerpop.gremlin.structure.Graph.{Features, Variables}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
 import org.apache.tinkerpop.gremlin.structure.{Transaction, T, Graph, Vertex, Edge}
 import play.api.libs.json.{Json, JsObject}
+import org.apache.tinkerpop.gremlin.structure.{Edge, Element, Graph, Property, T, Transaction, Vertex}
+import play.api.libs.json.{JsObject, Json}
+
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -661,6 +664,7 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "float", "float")
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "double", "double")
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "integer", "integer")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "aKey", "string")
   }
 
   val DefaultLabel = management.createLabel("_s2graph", DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType,
@@ -1500,11 +1504,14 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   override def configuration(): Configuration = ???
 
   override def addVertex(kvs: AnyRef*): structure.Vertex = {
-    if (kvs.contains(null)) {
-      throw new java.lang.IllegalArgumentException
-    }
+    if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
+    if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
+//    if (kvs.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
+    if (kvs.grouped(2).map(_.head).exists(!_.isInstanceOf[String])) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
 
     val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
+    if (kvsMap.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
+
     val id = kvsMap.getOrElse(T.id.toString, System.currentTimeMillis())
     val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
 
