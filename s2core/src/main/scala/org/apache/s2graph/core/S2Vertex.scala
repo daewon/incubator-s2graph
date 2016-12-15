@@ -141,10 +141,7 @@ case class S2Vertex(graph: S2Graph,
   }
 
   override def property[V](cardinality: Cardinality, key: String, value: V, objects: AnyRef*): VertexProperty[V] = {
-    if (key == null) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-    if (value == null) throw Property.Exceptions.propertyValueCanNotBeNull()
-    if (key.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-    if (Graph.Hidden.isHidden(key)) throw Property.Exceptions.propertyKeyCanNotBeAHiddenKey(Graph.Hidden.hide(key))
+    S2Property.assertValidProp(key, value)
 
     cardinality match {
       case Cardinality.single =>
@@ -159,20 +156,11 @@ case class S2Vertex(graph: S2Graph,
   override def addEdge(label: String, vertex: Vertex, kvs: AnyRef*): Edge = {
     vertex match {
       case otherV: S2Vertex =>
-        if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
-        if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
-//        if (kvs.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-        if (kvs.grouped(2).map(_.head).exists(!_.isInstanceOf[String])) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
-
-        val props = ElementHelper.asMap(kvs: _*).asScala.toMap
-        if (props.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-        if (!props.keys.forall(_.isInstanceOf[String])) {
-          throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
-        }
-
-        if (!graph.features().edge().supportsUserSuppliedIds() && props.contains(T.id.toString)) {
+        if (!graph.features().edge().supportsUserSuppliedIds() && kvs.contains(T.id)) {
           throw Exceptions.userSuppliedIdsNotSupported()
         }
+
+        val props = S2Property.kvsToProps(kvs)
 
         //TODO: direction, operation, _timestamp need to be reserved property key.
         val direction = props.get("direction").getOrElse("out").toString
@@ -206,7 +194,10 @@ case class S2Vertex(graph: S2Graph,
     ls.iterator.asJava
   }
 
-  override def remove(): Unit = ???
+  override def remove(): Unit =
+    if (!graph.features().edge().supportsRemoveEdges()) {
+      throw Edge.Exceptions.edgeRemovalNotSupported
+    }
 
   override def label(): String = {
     serviceColumn.columnName

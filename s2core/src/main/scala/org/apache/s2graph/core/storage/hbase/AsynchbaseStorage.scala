@@ -507,6 +507,8 @@ class AsynchbaseStorage(override val graph: S2Graph,
               .setMinVersions(0)
               .setBlocksize(32768)
               .setBlockCacheEnabled(true)
+                // FIXME: For test!!
+              .setInMemory(true)
             if (ttl.isDefined) columnDesc.setTimeToLive(ttl.get)
             if (replicationScopeOpt.isDefined) columnDesc.setScope(replicationScopeOpt.get)
             desc.addFamily(columnDesc)

@@ -21,11 +21,52 @@ package org.apache.s2graph.core
 
 
 import org.apache.s2graph.core.mysqls.LabelMeta
-import org.apache.s2graph.core.types.{InnerValLikeWithTs, CanInnerValLike}
-import org.apache.tinkerpop.gremlin.structure.{Property}
-
+import org.apache.s2graph.core.types.{CanInnerValLike, InnerValLikeWithTs}
+import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
+import org.apache.tinkerpop.gremlin.structure._
 import scala.util.hashing.MurmurHash3
 
+object S2Property {
+  def kvsToProps(kvs: Seq[AnyRef]): Map[String, AnyRef] = {
+    import scala.collection.JavaConverters._
+
+    ElementHelper.legalPropertyKeyValueArray(kvs: _*)
+    val keySet = collection.mutable.Set[Any]()
+    val kvsList = ElementHelper.asPairs(kvs: _*).asScala
+    kvsList.foreach { pair =>
+      val key = pair.getValue0
+      val value = pair.getValue1
+      ElementHelper.validateProperty(key, value)
+      if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
+      if (!key.isInstanceOf[String])
+        throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+      if (!value.isInstanceOf[String])
+        throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
+
+      keySet.add(key)
+    }
+    ElementHelper.asMap(kvs: _*).asScala.toMap
+
+
+//    if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
+//    if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
+//    if (!kvs.grouped(2).map(_.head).forall(e => e.isInstanceOf[String] || e == T.id || e == T.label)) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+//
+//    val props = ElementHelper.asMap(kvs: _*).asScala.toMap
+//    if (props.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
+//
+//    props
+  }
+
+  def assertValidProp[T](key: Any, value: T): Unit = {
+    if (key == null) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
+    if (!key.isInstanceOf[String]) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+    if (key.toString.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
+    if (Graph.Hidden.isHidden(key.toString)) throw Property.Exceptions.propertyKeyCanNotBeAHiddenKey(Graph.Hidden.hide(key.toString))
+
+    if (value == null) throw Property.Exceptions.propertyValueCanNotBeNull()
+  }
+}
 
 case class S2Property[V](element: S2Edge,
                          labelMeta: LabelMeta,

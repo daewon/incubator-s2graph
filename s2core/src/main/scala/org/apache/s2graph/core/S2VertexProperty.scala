@@ -44,7 +44,12 @@ case class S2VertexProperty[V](element: S2Vertex,
 
   override def property[V](key: String, value: V): Property[V] = ???
 
-  override def remove(): Unit = isRemoved = true
+  override def remove(): Unit = {
+    if (!element.graph.features.vertex.properties.supportsRemoveProperty) {
+      throw Property.Exceptions.propertyRemovalNotSupported
+    }
+    isRemoved = true
+  }
 
   override def id(): AnyRef = ???
 

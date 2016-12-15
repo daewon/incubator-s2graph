@@ -487,7 +487,7 @@ case class S2Edge(innerGraph: S2Graph,
 
   override def toString: String = {
     // E + L_BRACKET + edge.id() + R_BRACKET + L_BRACKET + edge.outVertex().id() + DASH + edge.label() + ARROW + edge.inVertex().id() + R_BRACKET;
-    s"e[${id}][${srcVertex.id}-${innerLabel.label}->${tgtVertex.id}]"
+    s"e[${id}][${srcForVertex.id}-${innerLabel.label}->${tgtForVertex.id}]"
   }
 
   def checkProperty(key: String): Boolean = propsWithTs.containsKey(key)
@@ -554,10 +554,7 @@ case class S2Edge(innerGraph: S2Graph,
   }
 
   override def property[V](key: String, value: V): Property[V] = {
-    if (key == null) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-    if (value == null) throw Property.Exceptions.propertyValueCanNotBeNull()
-    if (key.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-    if (Graph.Hidden.isHidden(key)) throw Property.Exceptions.propertyKeyCanNotBeAHiddenKey(Graph.Hidden.hide(key))
+    S2Property.assertValidProp(key, value)
     value match {
       case _: String => property(key, value, System.currentTimeMillis())
       case _ => throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
