@@ -1498,7 +1498,6 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   override def addVertex(kvs: AnyRef*): structure.Vertex = {
     if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
     if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
-//    if (kvs.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
     if (kvs.grouped(2).map(_.head).exists(!_.isInstanceOf[String])) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
 
     val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
@@ -1506,7 +1505,6 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
 
     val id = kvsMap.getOrElse(T.id.toString, System.currentTimeMillis())
     val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
-
 
     val names = serviceColumnNames.split(S2Vertex.VertexLabelDelimiter)
     val (serviceName, columnName) =

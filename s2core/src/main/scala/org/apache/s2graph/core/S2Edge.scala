@@ -554,11 +554,7 @@ case class S2Edge(innerGraph: S2Graph,
   }
 
   override def property[V](key: String, value: V): Property[V] = {
-    if (key == null) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-    if (value == null) throw Property.Exceptions.propertyValueCanNotBeNull()
-    if (key.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-    if (Graph.Hidden.isHidden(key)) throw Property.Exceptions.propertyKeyCanNotBeAHiddenKey(Graph.Hidden.hide(key))
-
+    S2Property.assertValidProp(key, value)
     property(key, value, System.currentTimeMillis())
   }
 
