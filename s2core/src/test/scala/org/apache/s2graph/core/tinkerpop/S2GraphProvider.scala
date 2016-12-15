@@ -12,7 +12,7 @@ import org.apache.s2graph.core.types.HBaseType._
 import org.apache.s2graph.core.types.{VertexId, HBaseType, InnerVal}
 import org.apache.tinkerpop.gremlin.LoadGraphWith.GraphData
 import org.apache.tinkerpop.gremlin.structure.{T, Element, Graph, Edge}
-import org.apache.tinkerpop.gremlin.{LoadGraphWith, AbstractGraphProvider}
+import org.apache.tinkerpop.gremlin.{LoadGraphWith, AbstractGraphProvider, GraphManager}
 import sun.security.provider.certpath.Vertex
 import scala.collection.JavaConverters._
 import scala.util.Random

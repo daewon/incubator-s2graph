@@ -124,7 +124,7 @@ object S2Graph {
     val numOfThread = Runtime.getRuntime.availableProcessors()
     val threadPool = Executors.newFixedThreadPool(numOfThread)
     val ec = ExecutionContext.fromExecutor(threadPool)
-    new S2Graph(toTypeSafeConfig(configuration))(ec)
+    new S2Graph(configuration)(ec)
   }
 
   def initStorage(graph: S2Graph, config: Config)(ec: ExecutionContext): Storage[_, _] = {
@@ -534,16 +534,17 @@ object S2Graph {
 
 @Graph.OptIn(Graph.OptIn.SUITE_STRUCTURE_STANDARD)
 @Graph.OptOuts(value = Array(
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.FeatureSupportTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.FeatureSupportTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
+
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.SerializationTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphConstructionTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphConstructionTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.TransactionTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VariablesTest", method="*", reason="no"),
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"),
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"),
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
 
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoCustomTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoEdgeTest", method="*", reason="no"),
@@ -570,6 +571,13 @@ object S2Graph {
 class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph {
 
   import S2Graph._
+
+  private var apacheConfiguration: Configuration = _
+
+  def this(apacheConfiguration: Configuration)(ec: ExecutionContext) = {
+    this(S2Graph.toTypeSafeConfig(apacheConfiguration))(ec)
+    this.apacheConfiguration = apacheConfiguration
+  }
 
   private val running = new AtomicBoolean(true)
 
@@ -1502,7 +1510,7 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
 
   override def variables(): Variables = ???
 
-  override def configuration(): Configuration = ???
+  override def configuration(): Configuration = apacheConfiguration
 
   override def addVertex(kvs: AnyRef*): structure.Vertex = {
     if (!features().vertex().supportsUserSuppliedIds() && kvs.contains(T.id)) {

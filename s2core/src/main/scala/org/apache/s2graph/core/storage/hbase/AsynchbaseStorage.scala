@@ -616,7 +616,9 @@ class AsynchbaseStorage(override val graph: S2Graph,
       scan.setFamily(Serializable.edgeCf)
       scan.setMaxVersions(1)
 
-      scan.nextRows(10000).toFuture(emptyKeyValuesLs).map { kvsLs =>
+      scan.nextRows(10000).toFuture(emptyKeyValuesLs).map {
+        case null => Seq.empty
+        case kvsLs =>
         kvsLs.flatMap { kvs =>
           kvs.flatMap { kv =>
             indexEdgeDeserializer.fromKeyValues(Seq(kv), None)
@@ -634,10 +636,12 @@ class AsynchbaseStorage(override val graph: S2Graph,
       scan.setFamily(Serializable.vertexCf)
       scan.setMaxVersions(1)
 
-      scan.nextRows(10000).toFuture(emptyKeyValuesLs).map { kvsLs =>
-        kvsLs.flatMap { kvs =>
-          vertexDeserializer.fromKeyValues(kvs, None)
-        }
+      scan.nextRows(10000).toFuture(emptyKeyValuesLs).map {
+        case null => Seq.empty
+        case kvsLs =>
+          kvsLs.flatMap { kvs =>
+            vertexDeserializer.fromKeyValues(kvs, None)
+          }
       }
     }
     Future.sequence(futures).map(_.flatten)
