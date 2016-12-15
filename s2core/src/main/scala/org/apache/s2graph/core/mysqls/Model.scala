@@ -20,17 +20,18 @@
 package org.apache.s2graph.core.mysqls
 
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
 
-import com.typesafe.config.{ConfigFactory, Config}
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.s2graph.core.JSONParser
 import org.apache.s2graph.core.utils.{SafeUpdateCache, logger}
-import play.api.libs.json.{Json, JsObject, JsValue}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import scalikejdbc._
 
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 import scala.language.{higherKinds, implicitConversions}
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 object Model {
   var maxSize = 10000
@@ -39,6 +40,8 @@ object Model {
   val threadPool = Executors.newFixedThreadPool(numOfThread)
   val ec = ExecutionContext.fromExecutor(threadPool)
   val useUTF8Encoding = "?useUnicode=true&characterEncoding=utf8"
+
+  private val ModelReferenceCount = new AtomicLong(0L)
 
   def apply(config: Config) = {
     maxSize = config.getInt("cache.max.size")
@@ -58,6 +61,8 @@ object Model {
       settings)
 
     checkSchema()
+
+    ModelReferenceCount.incrementAndGet()
   }
 
   def checkSchema(): Unit = {
@@ -108,7 +113,7 @@ object Model {
   }
 
   def shutdown() = {
-    ConnectionPool.closeAll()
+    if (ModelReferenceCount.decrementAndGet() <= 0) ConnectionPool.closeAll()
   }
 
   def loadCache() = {

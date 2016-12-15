@@ -20,31 +20,31 @@
 package org.apache.s2graph.core
 
 import java.util
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.typesafe.config.{ConfigFactory, Config}
-import org.apache.commons.configuration.{Configuration, BaseConfiguration}
-
-import org.apache.s2graph.core.GraphExceptions.{LabelNotExistException, FetchTimeoutException}
+import com.typesafe.config.{Config, ConfigFactory}
+import org.apache.commons.configuration.{BaseConfiguration, Configuration}
+import org.apache.s2graph.core.GraphExceptions.{FetchTimeoutException, LabelNotExistException}
 import org.apache.s2graph.core.JSONParser._
 import org.apache.s2graph.core.mysqls._
 import org.apache.s2graph.core.storage.hbase.AsynchbaseStorage
 import org.apache.s2graph.core.storage.{SKeyValue, Storage}
 import org.apache.s2graph.core.types._
-import org.apache.s2graph.core.utils.{DeferCache, logger, Extensions}
+import org.apache.s2graph.core.utils.{DeferCache, Extensions, logger}
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
 import org.apache.tinkerpop.gremlin.structure
 import org.apache.tinkerpop.gremlin.structure.Graph.Features.EdgeFeatures
 import org.apache.tinkerpop.gremlin.structure.Graph.{Features, Variables}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Transaction, Element, T, Graph, Vertex, Edge, Property}
-import play.api.libs.json.{Json, JsObject}
+import org.apache.tinkerpop.gremlin.structure.{Edge, Element, Graph, Property, T, Transaction, Vertex}
+import play.api.libs.json.{JsObject, Json}
+
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.{ListBuffer, ArrayBuffer}
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.util.{Random, Try}
@@ -55,9 +55,7 @@ object S2Graph {
   type HashKey = (Int, Int, Int, Int, Boolean)
   type FilterHashKey = (Int, Int)
 
-
   val DefaultScore = 1.0
-
 
   private val DefaultConfigs: Map[String, AnyRef] = Map(
     "hbase.zookeeper.quorum" -> "localhost",
