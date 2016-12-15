@@ -558,8 +558,10 @@ case class S2Edge(innerGraph: S2Graph,
     if (value == null) throw Property.Exceptions.propertyValueCanNotBeNull()
     if (key.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
     if (Graph.Hidden.isHidden(key)) throw Property.Exceptions.propertyKeyCanNotBeAHiddenKey(Graph.Hidden.hide(key))
-
-    property(key, value, System.currentTimeMillis())
+    value match {
+      case _: String => property(key, value, System.currentTimeMillis())
+      case _ => throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
+    }
   }
 
   def property[V](key: String, value: V, ts: Long): Property[V] = {

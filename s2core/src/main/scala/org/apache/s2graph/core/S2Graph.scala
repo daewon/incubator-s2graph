@@ -38,11 +38,9 @@ import org.apache.tinkerpop.gremlin.structure
 import org.apache.tinkerpop.gremlin.structure.Graph.Features.EdgeFeatures
 import org.apache.tinkerpop.gremlin.structure.Graph.{Features, Variables}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Transaction, T, Graph, Vertex, Edge}
+import org.apache.tinkerpop.gremlin.structure.{Transaction, Element, T, Graph, Vertex, Edge, Property, VertexProperty}
 import play.api.libs.json.{Json, JsObject}
-import org.apache.tinkerpop.gremlin.structure.{Edge, Element, Graph, Property, T, Transaction, Vertex}
-import play.api.libs.json.{JsObject, Json}
-
+import play.api.libs.json.{Json, JsObject}
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -537,16 +535,16 @@ object S2Graph {
 
 @Graph.OptIn(Graph.OptIn.SUITE_STRUCTURE_STANDARD)
 @Graph.OptOuts(value = Array(
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.FeatureSupportTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.SerializationTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphConstructionTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.TransactionTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VariablesTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.FeatureSupportTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.SerializationTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphConstructionTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.TransactionTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VariablesTest", method="*", reason="no"),
 //  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
 
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoCustomTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoEdgeTest", method="*", reason="no"),
@@ -1153,6 +1151,7 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     if (running.compareAndSet(true, false)) {
       flushStorage()
       Model.shutdown()
+      defaultStorage.shutdown()
     }
 
   def toGraphElement(s: String, labelMapping: Map[String, String] = Map.empty): Option[GraphElement] = Try {
@@ -1504,17 +1503,48 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   override def configuration(): Configuration = ???
 
   override def addVertex(kvs: AnyRef*): structure.Vertex = {
-    if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
-    if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
-//    if (kvs.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-    if (kvs.grouped(2).map(_.head).exists(!_.isInstanceOf[String])) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+    ElementHelper.legalPropertyKeyValueArray(kvs: _*)
+    val keySet = collection.mutable.Set[Any]()
+    val kvsList = ElementHelper.asPairs(kvs: _*).asScala
+    kvsList.foreach { pair =>
+      val key = pair.getValue0
+      val value = pair.getValue1
+      if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
+      if (!key.isInstanceOf[String])
+        throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+      if (!value.isInstanceOf[String])
+        throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
+
+      keySet.add(key)
+    }
+//    val keySet = kvsList.map(pair => pair.getValue0).toSet
+//    if (keySet.size != kvsList.size) throw VertexProperty.Exceptions.multiPropertiesNotSupported
+//    val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
+//    kvsMap.foreach {
+//      case (key, value) =>
+//        if (!key.isInstanceOf[String])
+//          throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+//        if (!value.isInstanceOf[String])
+//          throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
+//    }
+
+
+//    if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
+//    if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
+//    val kvsPair = kvs.grouped(2)
+//    if (kvsPair.map(_.head).toSet.size != kvsPair.size) throw VertexProperty.Exceptions.multiPropertiesNotSupported
+//    if (kvsPair.map(_.head).exists(!_.isInstanceOf[String])) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+//
+//    val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
+//    if (kvsMap.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
+//    kvsMap.values.foreach {
+//      case _: String =>
+//      case value => Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
+//    }
 
     val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
-    if (kvsMap.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-
     val id = kvsMap.getOrElse(T.id.toString, System.currentTimeMillis())
     val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
-
 
     val names = serviceColumnNames.split(S2Vertex.VertexLabelDelimiter)
     val (serviceName, columnName) =
