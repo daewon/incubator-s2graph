@@ -539,10 +539,11 @@ object S2Graph {
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.TransactionTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VariablesTest", method="*", reason="no"),
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"),
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"),
+
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"), // pass
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"), // pass
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"), // pass
 
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoCustomTest", method="*", reason="no"),
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.io.IoEdgeTest", method="*", reason="no"),
@@ -1496,13 +1497,7 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   override def configuration(): Configuration = ???
 
   override def addVertex(kvs: AnyRef*): structure.Vertex = {
-    if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
-    if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
-    if (kvs.grouped(2).map(_.head).exists(!_.isInstanceOf[String])) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
-
-    val kvsMap = ElementHelper.asMap(kvs: _*).asScala.toMap
-    if (kvsMap.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-
+    val kvsMap = S2Property.kvsToProps(kvs)
     val id = kvsMap.getOrElse(T.id.toString, System.currentTimeMillis())
     val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
 

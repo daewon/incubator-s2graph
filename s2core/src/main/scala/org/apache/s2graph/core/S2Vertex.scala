@@ -157,7 +157,6 @@ case class S2Vertex(graph: S2Graph,
     vertex match {
       case otherV: S2Vertex =>
         val props = S2Property.kvsToProps(kvs)
-        if (props.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
 
         if (!graph.features().edge().supportsUserSuppliedIds() && props.contains(T.id.toString)) {
           throw Exceptions.userSuppliedIdsNotSupported()

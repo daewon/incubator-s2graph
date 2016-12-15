@@ -23,7 +23,7 @@ package org.apache.s2graph.core
 import org.apache.s2graph.core.mysqls.LabelMeta
 import org.apache.s2graph.core.types.{CanInnerValLike, InnerValLikeWithTs}
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Element, Graph, Property}
+import org.apache.tinkerpop.gremlin.structure.{Element, Graph, Property, T}
 
 import scala.util.hashing.MurmurHash3
 
@@ -32,7 +32,7 @@ object S2Property {
     import scala.collection.JavaConverters._
     if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
     if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
-    if (kvs.grouped(2).map(_.head).exists(!_.isInstanceOf[String])) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+    if (!kvs.grouped(2).map(_.head).forall(e => e.isInstanceOf[String] || e == T.id || e == T.label)) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
 
     val props = ElementHelper.asMap(kvs: _*).asScala.toMap
     if (props.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
