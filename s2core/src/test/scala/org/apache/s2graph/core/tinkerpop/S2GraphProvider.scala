@@ -110,6 +110,13 @@ class S2GraphProvider extends AbstractGraphProvider {
     val friend = mnt.createLabel("friend", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
       true, service.serviceName, Nil, Nil, "weak", None, None)
 
+    val collaborator = mnt.createLabel("collaborator", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
+      true, service.serviceName, Nil,
+      Seq(
+        Prop("location", "-", "string")
+      ),
+      "weak", None, None)
+
     super.loadGraphData(graph, loadGraphWith, testClass, testName)
   }
 
