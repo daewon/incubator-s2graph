@@ -33,19 +33,22 @@ object S2Property {
     ElementHelper.legalPropertyKeyValueArray(kvs: _*)
     val keySet = collection.mutable.Set[Any]()
     val kvsList = ElementHelper.asPairs(kvs: _*).asScala
+    var result = Map[String, AnyRef]()
     kvsList.foreach { pair =>
       val key = pair.getValue0
       val value = pair.getValue1
       ElementHelper.validateProperty(key, value)
-      if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
+//      if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
       if (!key.isInstanceOf[String])
         throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
       if (!value.isInstanceOf[String])
         throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
 
       keySet.add(key)
+      result = result + (key -> value)
     }
-    ElementHelper.asMap(kvs: _*).asScala.toMap
+    result
+//    ElementHelper.asMap(kvs: _*).asScala.toMap
 
 
 //    if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
