@@ -180,6 +180,7 @@ object JSONParser {
     val dType = InnerVal.toInnerDataType(dataType)
     val isNumeric = isNumericType(dType)
     any match {
+      case a: InnerValLike => a
       case n: BigDecimal =>
         if (isNumeric) InnerVal.withNumber(n, version)
         else if (dType == InnerVal.STRING) InnerVal.withStr(n.toString, version)

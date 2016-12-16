@@ -661,7 +661,7 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
 
   /* TODO */
   val DefaultService = management.createService("_s2graph", "localhost", "s2graph", 0, None).get
-  val DefaultColumn = ServiceColumn.findOrInsert(DefaultService.id.get, "vertex", Some("integer"), HBaseType.DEFAULT_VERSION)
+  val DefaultColumn = ServiceColumn.findOrInsert(DefaultService.id.get, "vertex", Some("string"), HBaseType.DEFAULT_VERSION)
   val DefaultColumnMetas = {
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "test", "string")
     ColumnMeta.findOrInsert(DefaultColumn.id.get, "name", "string")
@@ -1313,8 +1313,21 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
               statusCode: Byte = 0,
               lockTs: Option[Long] = None,
               tsInnerValOpt: Option[InnerValLike] = None): S2Edge = {
-    val edge = new S2Edge(this, srcVertex, tgtVertex, innerLabel, dir, op, version, S2Edge.EmptyProps,
-      parentEdges, originalEdgeOpt, pendingEdgeOpt, statusCode, lockTs, tsInnerValOpt)
+    val edge = S2Edge(
+      this,
+      srcVertex,
+      tgtVertex,
+      innerLabel,
+      dir,
+      op,
+      version,
+      S2Edge.EmptyProps,
+      parentEdges,
+      originalEdgeOpt,
+      pendingEdgeOpt,
+      statusCode,
+      lockTs,
+      tsInnerValOpt)
     S2Edge.fillPropsWithTs(edge, propsWithTs)
     edge
   }
@@ -1494,7 +1507,7 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     if (edgeIds.isEmpty) {
       // FIXME
       val edges = Await.result(defaultStorage.fetchEdgesAll(), WaitTimeout).iterator
-      edges.filterNot(_.isDegree)
+      edges.filterNot(_.isDegree).filterNot(_.direction == "in")
     } else {
       Await.result(edgesAsync(edgeIds: _*), WaitTimeout)
     }
@@ -1528,7 +1541,7 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
       throw Vertex.Exceptions.userSuppliedIdsNotSupported
     }
     val kvsMap = S2Property.kvsToProps(kvs)
-    val id = kvsMap.getOrElse(T.id.toString, System.currentTimeMillis())
+    val id = kvsMap.getOrElse(T.id.toString, Random.nextLong)
     val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
 
 
@@ -1600,4 +1613,5 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
 
   override def features() = s2Features
 
+  override def toString(): String = "[s2graph]"
 }

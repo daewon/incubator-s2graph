@@ -20,18 +20,17 @@
 package org.apache.s2graph.core
 
 import java.util
-import java.util.function.{BiConsumer, Consumer}
+import java.util.function.{Consumer, BiConsumer}
 
-import org.apache.s2graph.core.S2Edge.{Props, State}
+import org.apache.s2graph.core.S2Edge.{State, Props}
 import org.apache.s2graph.core.JSONParser._
-import org.apache.s2graph.core.mysqls.{Label, LabelIndex, LabelMeta}
+import org.apache.s2graph.core.mysqls.{Label, LabelIndex, LabelMeta, ServiceColumn}
 import org.apache.s2graph.core.types._
 import org.apache.s2graph.core.utils.logger
 import org.apache.tinkerpop.gremlin.structure
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory
-import org.apache.tinkerpop.gremlin.structure.{Direction, Edge, Graph, Property, Vertex}
-import play.api.libs.json.{JsNumber, JsObject, Json}
-
+import org.apache.tinkerpop.gremlin.structure.{Graph, Vertex, Edge, Property, Direction}
+import play.api.libs.json.{Json, JsNumber, JsObject}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{Map => MutableMap}
 import scala.concurrent.Await
@@ -530,8 +529,14 @@ case class S2Edge(innerGraph: S2Graph,
   override def vertices(direction: Direction): util.Iterator[structure.Vertex] = {
     val arr = new util.ArrayList[Vertex]()
     direction match {
-      case Direction.OUT => arr.add(srcVertex)
-      case Direction.IN => arr.add(tgtVertex)
+      case Direction.OUT =>
+        val newVertexId = VertexId(innerLabel.srcColumn, srcVertex.innerId)
+        arr.add(srcVertex.copy(id = newVertexId))
+//        arr.add(srcVertex)
+      case Direction.IN =>
+        val newVertexId = VertexId(innerLabel.srcColumn, tgtVertex.innerId)
+        arr.add(tgtVertex.copy(id = newVertexId))
+//        arr.add(tgtVertex)
       case _ =>
         arr.add(srcVertex)
         arr.add(tgtVertex)
@@ -585,10 +590,11 @@ case class S2Edge(innerGraph: S2Graph,
   override def graph(): Graph = innerGraph
 
   override def id(): AnyRef = {
+    // NOTE: xxxForVertex makes direction to be "out"
     if (this.innerLabel.consistencyLevel == "strong") {
-      EdgeId(srcVertex.innerId, tgtVertex.innerId, label(), direction, 0)
+      EdgeId(srcForVertex.innerId, tgtForVertex.innerId, label(), "out", 0)
     } else {
-      EdgeId(srcVertex.innerId, tgtVertex.innerId, label(), direction, ts)
+      EdgeId(srcForVertex.innerId, tgtForVertex.innerId, label(), "out", ts)
     }
   }
 

@@ -20,18 +20,16 @@
 package org.apache.s2graph.core
 
 import java.util
-import java.util.function.{BiConsumer, Consumer}
+import java.util.function.{Consumer, BiConsumer}
 
 import org.apache.s2graph.core.GraphExceptions.LabelNotExistException
 import org.apache.s2graph.core.S2Vertex.Props
-import org.apache.s2graph.core.mysqls.{ColumnMeta, LabelMeta, Service, ServiceColumn}
+import org.apache.s2graph.core.mysqls._
 import org.apache.s2graph.core.types._
 import org.apache.tinkerpop.gremlin.structure.Edge.Exceptions
 import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
-import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
-import org.apache.tinkerpop.gremlin.structure.{Direction, Edge, Element, Graph, Property, T, Vertex, VertexProperty}
+import org.apache.tinkerpop.gremlin.structure.{T, Vertex, Edge, Property, VertexProperty, Direction}
 import play.api.libs.json.Json
-
 import scala.collection.JavaConverters._
 
 case class S2Vertex(graph: S2Graph,
@@ -137,7 +135,31 @@ case class S2Vertex(graph: S2Graph,
   }
 
   override def edges(direction: Direction, labelNames: String*): util.Iterator[Edge] = {
-    graph.fetchEdges(this, labelNames, direction.name())
+    val labelNameList = {
+      if (labelNames.isEmpty) {
+        val labelList =
+          // TODO: Let's clarify direction
+          if (direction == Direction.IN) Label.findBySrcColumnId(id.colId)
+          else Label.findBySrcColumnId(id.colId)
+        labelList.map(_.label)
+      } else {
+        labelNames
+      }
+    }
+    graph.fetchEdges(this, labelNameList, direction.name())
+  }
+
+  def propertyInner[V](cardinality: Cardinality, key: String, value: V, objects: AnyRef*): VertexProperty[V] = {
+    S2Property.assertValidProp(key, value)
+
+    cardinality match {
+      case Cardinality.single =>
+        val columnMeta = serviceColumn.metasInvMap.getOrElse(key, throw new RuntimeException(s"$key is not configured on Vertex."))
+        val newProps = new S2VertexProperty[V](this, columnMeta, key, value)
+        props.put(key, newProps)
+        newProps
+      case _ => throw new RuntimeException("only single cardinality is supported.")
+    }
   }
 
   override def property[V](cardinality: Cardinality, key: String, value: V, objects: AnyRef*): VertexProperty[V] = {
@@ -237,7 +259,8 @@ object S2Vertex {
   def fillPropsWithTs(vertex: S2Vertex, props: Props): Unit = {
     props.forEach(new BiConsumer[String, S2VertexProperty[_]] {
       override def accept(key: String, p: S2VertexProperty[_]): Unit = {
-        vertex.property(Cardinality.single, key, p.value)
+//        vertex.property(Cardinality.single, key, p.value)
+        vertex.propertyInner(Cardinality.single, key, p.value)
       }
     })
   }
