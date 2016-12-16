@@ -34,9 +34,11 @@ class S2GraphProvider extends AbstractGraphProvider {
 
   override def getBaseConfiguration(s: String, aClass: Class[_], s1: String, graphData: GraphData): util.Map[String, AnyRef] = {
     val config = ConfigFactory.load()
-    val dbUrl =
-      if (config.hasPath("db.default.url")) config.getString("db.default.url")
-      else "jdbc:mysql://default:3306/graph_dev"
+    val dbUrl = "jdbc:mysql://default:3306/graph_dev"
+
+//    val dbUrl =
+//      if (config.hasPath("db.default.url")) config.getString("db.default.url")
+//      else "jdbc:mysql://default:3306/graph_dev"
     val m = new java.util.HashMap[String, AnyRef]()
     m.put(Graph.GRAPH, classOf[S2Graph].getName)
     m.put("db.default.url", dbUrl)
@@ -93,29 +95,39 @@ class S2GraphProvider extends AbstractGraphProvider {
       ),
       "strong",
       None,
-      None)
+      None,
+      options = Option("""{"skipReverse": true}""")
+    )
 
     val bought = mnt.createLabel("bought", service.serviceName, "person", "integer", service.serviceName, "product", "integer",
-      true, service.serviceName, Nil, Seq(Prop("x", "-", "string"), Prop("y", "-", "string")), "strong", None, None)
+      true, service.serviceName, Nil, Seq(Prop("x", "-", "string"), Prop("y", "-", "string")), "strong", None, None,
+      options = Option("""{"skipReverse": true}"""))
 
     val test = mnt.createLabel("test", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Seq(Prop("xxx", "-", "string")), "weak", None, None)
+      true, service.serviceName, Nil, Seq(Prop("xxx", "-", "string")), "weak", None, None,
+      options = Option("""{"skipReverse": true}"""))
 
     val self = mnt.createLabel("self", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None)
+      true, service.serviceName, Nil, Nil, "weak", None, None,
+      options = Option("""{"skipReverse": true}"""))
 
     val friends = mnt.createLabel("friends", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None)
+      true, service.serviceName, Nil, Nil, "weak", None, None,
+      options = Option("""{"skipReverse": true}"""))
 
     val friend = mnt.createLabel("friend", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None)
+      true, service.serviceName, Nil, Nil, "weak", None, None,
+      options = Option("""{"skipReverse": true}""")
+    )
 
     val collaborator = mnt.createLabel("collaborator", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
       true, service.serviceName, Nil,
       Seq(
         Prop("location", "-", "string")
       ),
-      "weak", None, None)
+      "strong", None, None,
+       options = Option("""{"skipReverse": true}""")
+    )
 
     super.loadGraphData(graph, loadGraphWith, testClass, testName)
   }

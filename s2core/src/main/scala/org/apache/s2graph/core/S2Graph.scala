@@ -681,8 +681,9 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   }
 
   val DefaultLabel = management.createLabel("_s2graph", DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType,
-    DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType, true, DefaultService.serviceName, Nil, Nil, "weak", None, None)
-
+    DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType, true, DefaultService.serviceName, Nil, Nil, "weak", None, None,
+    options = Option("""{"skipReverse": true}""")
+  )
 
   def getStorage(service: Service): Storage[_, _] = {
     storagePool.getOrElse(s"service:${service.serviceName}", defaultStorage)
@@ -1491,7 +1492,9 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
 
   override def edges(edgeIds: AnyRef*): util.Iterator[structure.Edge] = {
     if (edgeIds.isEmpty) {
-      Await.result(defaultStorage.fetchEdgesAll(), WaitTimeout).iterator
+      // FIXME
+      val edges = Await.result(defaultStorage.fetchEdgesAll(), WaitTimeout).iterator
+      edges.filterNot(_.isDegree)
     } else {
       Await.result(edgesAsync(edgeIds: _*), WaitTimeout)
     }

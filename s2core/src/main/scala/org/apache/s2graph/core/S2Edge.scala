@@ -34,6 +34,7 @@ import play.api.libs.json.{JsNumber, JsObject, Json}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{Map => MutableMap}
+import scala.concurrent.Await
 import scala.util.hashing.MurmurHash3
 
 case class SnapshotEdge(graph: S2Graph,
@@ -556,7 +557,15 @@ case class S2Edge(innerGraph: S2Graph,
   override def property[V](key: String, value: V): Property[V] = {
     S2Property.assertValidProp(key, value)
     value match {
-      case _: String => property(key, value, System.currentTimeMillis())
+      case _: String =>
+        val v = property(key, value, System.currentTimeMillis())
+        // FIXME: for test
+
+//        val ts = props.get(LabelMeta.timestamp.name).map(_.toString.toLong).getOrElse(System.currentTimeMillis())
+//        propsWithTs.put(LabelMeta.timestamp.name, ())
+        val ret = Await.result(innerGraph.mutateEdges(Seq(this.copy(version = this.version + 1)), true), innerGraph.WaitTimeout)
+
+        v
       case _ => throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
     }
   }
