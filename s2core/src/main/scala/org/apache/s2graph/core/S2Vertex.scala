@@ -148,6 +148,9 @@ case class S2Vertex(graph: S2Graph,
         val columnMeta = serviceColumn.metasInvMap.getOrElse(key, throw new RuntimeException(s"$key is not configured on Vertex."))
         val newProps = new S2VertexProperty[V](this, columnMeta, key, value)
         props.put(key, newProps)
+
+        // FIXME: save to persistent for tp test
+        graph.addVertex(this)
         newProps
       case _ => throw new RuntimeException("only single cardinality is supported.")
     }
@@ -186,18 +189,18 @@ case class S2Vertex(graph: S2Graph,
   }
 
   override def properties[V](keys: String*): util.Iterator[VertexProperty[V]] = {
-    val ls = for {
-      key <- keys
-    } yield {
-      property[V](key)
+    val ls = new util.ArrayList[VertexProperty[V]]()
+    if (keys.isEmpty) {
+      props.keySet().forEach(new Consumer[String] {
+        override def accept(key: String): Unit = {
+          if (!ColumnMeta.reservedMetaNamesSet(key)) ls.add(property[V](key))
+        }
+      })
+    } else {
+      keys.foreach { key => ls.add(property[V](key)) }
     }
-    ls.iterator.asJava
+    ls.iterator
   }
-
-  override def remove(): Unit =
-    if (!graph.features().edge().supportsRemoveEdges()) {
-      throw Edge.Exceptions.edgeRemovalNotSupported
-    }
 
   override def label(): String = {
     serviceColumn.columnName
@@ -205,6 +208,14 @@ case class S2Vertex(graph: S2Graph,
 //    else {
 //      service.serviceName + S2Vertex.VertexLabelDelimiter + serviceColumn.columnName
 //    }
+  }
+
+  override def remove(): Unit = {
+    if (!graph.features().vertex().supportsRemoveProperty()) {
+      throw Property.Exceptions.propertyRemovalNotSupported()
+    } else {
+      // do nothing
+    }
   }
 }
 

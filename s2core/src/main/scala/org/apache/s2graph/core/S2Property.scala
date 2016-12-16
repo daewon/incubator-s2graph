@@ -58,7 +58,7 @@ object S2Property {
 //    props
   }
 
-  def assertValidProp[T](key: Any, value: T): Unit = {
+  def assertValidProp[A](key: Any, value: A): Unit = {
     if (key == null) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
     if (!key.isInstanceOf[String]) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
     if (key.toString.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
@@ -99,10 +99,8 @@ case class S2Property[V](element: S2Edge,
   }
 
   override def equals(other: Any): Boolean = other match {
-    case p: S2Property[_] =>
-      labelMeta.labelId == p.labelMeta.labelId &&
-      labelMeta.seq == p.labelMeta.seq &&
-      key == p.key && value == p.value && ts == p.ts
+    case p: Property[_] =>
+      key == p.key() && v == p.value()
     case _ => false
   }
 

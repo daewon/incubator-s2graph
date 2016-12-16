@@ -24,13 +24,14 @@ import scalikejdbc._
 
 object ColumnMeta extends Model[ColumnMeta] {
 
-  val timeStampSeq = 0.toByte
-  val countSeq = -1.toByte
+  val timeStampSeq = -1.toByte
   val lastModifiedAtColumnSeq = 0.toByte
   val lastModifiedAtColumn = ColumnMeta(Some(0), 0, "lastModifiedAt", lastModifiedAtColumnSeq, "long")
   val maxValue = Byte.MaxValue
 
-  val timestamp = ColumnMeta(None, -1, "_timestamp", timeStampSeq, "long")
+  val timestamp = ColumnMeta(None, -1, "_timestamp", timeStampSeq.toByte, "long")
+  val reservedMetas = Seq(timestamp, lastModifiedAtColumn)
+  val reservedMetaNamesSet = reservedMetas.map(_.name).toSet
 
   def apply(rs: WrappedResultSet): ColumnMeta = {
     ColumnMeta(Some(rs.int("id")), rs.int("column_id"), rs.string("name"), rs.byte("seq"), rs.string("data_type").toLowerCase())
