@@ -34,11 +34,9 @@ class S2GraphProvider extends AbstractGraphProvider {
 
   override def getBaseConfiguration(s: String, aClass: Class[_], s1: String, graphData: GraphData): util.Map[String, AnyRef] = {
     val config = ConfigFactory.load()
-//    val dbUrl = "jdbc:mysql://default:3306/graph_dev"
-
     val dbUrl =
       if (config.hasPath("db.default.url")) config.getString("db.default.url")
-      else "jdbc:mysql://default:3306/graph_dev"
+      else "jdbc:mysql://localhost:3306/graph_dev"
     val m = new java.util.HashMap[String, AnyRef]()
     m.put(Graph.GRAPH, classOf[S2Graph].getName)
     m.put("db.default.url", dbUrl)
@@ -57,6 +55,21 @@ class S2GraphProvider extends AbstractGraphProvider {
           }
         }
         s2Graph.shutdown()
+
+        val dbUrl = configuration.getString("db.default.url")
+        val prefix = "jdbc:h2:file:"
+        if (dbUrl.contains(prefix)) {
+          dbUrl
+              .split(prefix)
+              .lastOption
+              .flatMap { suffix =>
+                suffix.split(";").headOption
+              }
+              .foreach { dbFile =>
+                val f = new File(dbFile)
+                f.delete()
+              }
+        }
         logger.info(s"S2Graph Shutdown")
       }
     }
