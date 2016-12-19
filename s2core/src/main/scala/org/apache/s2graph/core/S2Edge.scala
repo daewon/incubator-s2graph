@@ -363,15 +363,16 @@ case class S2Edge(innerGraph: S2Graph,
 
   //    def relatedEdges = List(this)
 
-  private def getServiceColumn(columnId: Int): ServiceColumn = ServiceColumn.findById(columnId)
+  private def getServiceColumn(vertex: S2Vertex, defaultServiceColumn: ServiceColumn) =
+      if (vertex.id.column == ServiceColumn.Default) defaultServiceColumn else vertex.id.column
 
   def srcForVertex = {
     val belongLabelIds = Seq(labelWithDir.labelId)
     if (labelWithDir.dir == GraphUtil.directions("in")) {
-      val tgtColumn = getServiceColumn(tgtVertex.id.colId)
+      val tgtColumn = getServiceColumn(tgtVertex, innerLabel.tgtColumn)
       innerGraph.newVertex(VertexId(tgtColumn, tgtVertex.innerId), tgtVertex.ts, tgtVertex.props, belongLabelIds = belongLabelIds)
     } else {
-      val srcColumn = getServiceColumn(srcVertex.id.colId)
+      val srcColumn = getServiceColumn(srcVertex, innerLabel.srcColumn)
       innerGraph.newVertex(VertexId(srcColumn, srcVertex.innerId), srcVertex.ts, srcVertex.props, belongLabelIds = belongLabelIds)
     }
   }
@@ -379,10 +380,10 @@ case class S2Edge(innerGraph: S2Graph,
   def tgtForVertex = {
     val belongLabelIds = Seq(labelWithDir.labelId)
     if (labelWithDir.dir == GraphUtil.directions("in")) {
-      val srcColumn = getServiceColumn(srcVertex.id.colId)
+      val srcColumn = getServiceColumn(srcVertex, innerLabel.srcColumn)
       innerGraph.newVertex(VertexId(srcColumn, srcVertex.innerId), srcVertex.ts, srcVertex.props, belongLabelIds = belongLabelIds)
     } else {
-      val tgtColumn = getServiceColumn(tgtVertex.id.colId)
+      val tgtColumn = getServiceColumn(tgtVertex, innerLabel.tgtColumn)
       innerGraph.newVertex(VertexId(tgtColumn, tgtVertex.innerId), tgtVertex.ts, tgtVertex.props, belongLabelIds = belongLabelIds)
     }
   }
