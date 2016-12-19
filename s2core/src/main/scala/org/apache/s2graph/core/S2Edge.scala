@@ -530,11 +530,11 @@ case class S2Edge(innerGraph: S2Graph,
     val arr = new util.ArrayList[Vertex]()
     direction match {
       case Direction.OUT =>
-        val newVertexId = VertexId(innerLabel.srcColumn, srcVertex.innerId)
+        val newVertexId = VertexId(ServiceColumn.findById(srcForVertex.id.colId), srcForVertex.innerId)
         arr.add(srcVertex.copy(id = newVertexId))
 //        arr.add(srcVertex)
       case Direction.IN =>
-        val newVertexId = VertexId(innerLabel.srcColumn, tgtVertex.innerId)
+        val newVertexId = VertexId(ServiceColumn.findById(tgtForVertex.id.colId), tgtForVertex.innerId)
         arr.add(tgtVertex.copy(id = newVertexId))
 //        arr.add(tgtVertex)
       case _ =>
