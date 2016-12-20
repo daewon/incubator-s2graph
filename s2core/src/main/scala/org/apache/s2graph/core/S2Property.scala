@@ -42,6 +42,8 @@ object S2Property {
       if (!key.isInstanceOf[String]) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
       if (value.isInstanceOf[Iterable[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
       if (value.isInstanceOf[Array[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
+      if (value.isInstanceOf[java.util.List[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
+      if (value.isInstanceOf[java.util.Map[_, _]])throw throw new java.lang.IllegalArgumentException("not supported data type")
 
       keySet.add(key)
       result = result + (key -> value)

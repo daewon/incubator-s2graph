@@ -233,10 +233,10 @@ case class S2Vertex(graph: S2Graph,
   }
 
   override def remove(): Unit = {
-    if (!graph.features().vertex().supportsRemoveProperty()) {
-      throw Property.Exceptions.propertyRemovalNotSupported()
+    if (graph.features().vertex().supportsRemoveVertices()) {
+      // remove edge
     } else {
-      // do nothing
+      throw Vertex.Exceptions.vertexRemovalNotSupported()
     }
   }
 }

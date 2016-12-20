@@ -592,7 +592,13 @@ case class S2Edge(innerGraph: S2Graph,
     newProp
   }
 
-  override def remove(): Unit = {}
+  override def remove(): Unit =  {
+    if (graph.features().edge().supportsRemoveEdges()) {
+      // remove edge
+    } else {
+      throw Edge.Exceptions.edgeRemovalNotSupported()
+    }
+  }
 
   override def graph(): Graph = innerGraph
 
