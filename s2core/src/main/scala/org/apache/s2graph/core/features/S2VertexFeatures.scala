@@ -14,23 +14,5 @@ class S2VertexFeatures extends S2ElementFeatures with Features.VertexFeatures {
 
   override def supportsMetaProperties(): Boolean = false
 
-  override def properties(): Features.VertexPropertyFeatures = new S2VertexPropertyFeatures {
-    override def supportsCustomIds(): Boolean = false
-
-    override def supportsUuidIds(): Boolean = false
-
-    override def supportsAddProperty(): Boolean = true
-
-    override def supportsUserSuppliedIds(): Boolean = true
-
-    override def supportsRemoveProperty(): Boolean = false
-
-    override def supportsAnyIds(): Boolean = false
-
-    override def supportsNumericIds(): Boolean = false
-
-    override def willAllowId(id: Any): Boolean = true
-
-    override def supportsStringIds(): Boolean = true
-  }
+  override def properties(): Features.VertexPropertyFeatures = new S2VertexPropertyFeatures()
 }
