@@ -15,9 +15,10 @@ import org.apache.tinkerpop.gremlin.structure.{T, Element, Graph, Edge}
 import org.apache.tinkerpop.gremlin.{LoadGraphWith, AbstractGraphProvider, GraphManager}
 import sun.security.provider.certpath.Vertex
 import scala.collection.JavaConverters._
-import scala.util.Random
+import scala.util.{Random, Failure, Try, Success}
 
 import com.typesafe.config.ConfigFactory
+import org.apache.commons.io.FileUtils
 
 import org.apache.s2graph.core.utils.logger
 
@@ -67,10 +68,13 @@ class S2GraphProvider extends AbstractGraphProvider {
               }
               .foreach { dbFile =>
                 val f = new File(dbFile)
-                f.delete()
+                Try(FileUtils.deleteDirectory(f)) match {
+                  case Success(_) => logger.info(s"Success to shutdown $dbUrl: $dbFile was deleted")
+                  case Failure(e) => logger.info(s"Failed to shutdown $dbUrl: $e")
+                }
               }
         }
-        logger.info(s"S2Graph Shutdown")
+        logger.info("S2Graph Shutdown")
       }
     }
 
