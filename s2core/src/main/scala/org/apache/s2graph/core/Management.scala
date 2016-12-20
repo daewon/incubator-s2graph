@@ -77,15 +77,15 @@ object Management {
                           schemaVersion: String = DEFAULT_VERSION) = {
 
     Model withTx { implicit session =>
-      val serviceOpt = Service.findByName(serviceName)
+      val serviceOpt = Service.findByName(serviceName, useCache = false)
       serviceOpt match {
         case None => throw new RuntimeException(s"create service $serviceName has not been created.")
         case Some(service) =>
-          val serviceColumn = ServiceColumn.findOrInsert(service.id.get, columnName, Some(columnType), schemaVersion)
+          val serviceColumn = ServiceColumn.findOrInsert(service.id.get, columnName, Some(columnType), schemaVersion, useCache = false)
           for {
             Prop(propName, defaultValue, dataType) <- props
           } yield {
-            ColumnMeta.findOrInsert(serviceColumn.id.get, propName, dataType)
+            ColumnMeta.findOrInsert(serviceColumn.id.get, propName, dataType, useCache = false)
           }
       }
     }
@@ -278,7 +278,7 @@ class Management(graph: S2Graph) {
                     compressionAlgorithm: String = DefaultCompressionAlgorithm): Try[Service] = {
 
     Model withTx { implicit session =>
-      val service = Service.findOrInsert(serviceName, cluster, hTableName, preSplitSize, hTableTTL.orElse(Some(Integer.MAX_VALUE)), compressionAlgorithm)
+      val service = Service.findOrInsert(serviceName, cluster, hTableName, preSplitSize, hTableTTL.orElse(Some(Integer.MAX_VALUE)), compressionAlgorithm, useCache = false)
       /** create hbase table for service */
       graph.getStorage(service).createTable(service.cluster, service.hTableName, List("e", "v"), service.preSplitSize, service.hTableTTL, compressionAlgorithm)
       service

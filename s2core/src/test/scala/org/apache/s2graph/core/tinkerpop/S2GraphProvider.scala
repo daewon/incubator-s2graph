@@ -2,6 +2,7 @@ package org.apache.s2graph.core.tinkerpop
 
 import java.io.File
 import java.util
+import java.util.concurrent.atomic.AtomicLong
 
 import org.apache.commons.configuration.Configuration
 
@@ -41,26 +42,10 @@ class S2GraphProvider extends AbstractGraphProvider {
     m.put(Graph.GRAPH, classOf[S2Graph].getName)
     m.put("db.default.url", dbUrl)
     m.put("db.default.driver", "com.mysql.jdbc.Driver")
-    convertH2DatabaseUrl(s, m)
+    m
   }
 
   private val H2Prefix = "jdbc:h2:file:"
-  private def isH2Database(configMap: java.util.HashMap[String, AnyRef]): Boolean = {
-    configMap.get("db.default.url").asInstanceOf[String].contains(H2Prefix)
-  }
-  private def convertH2DatabaseUrl(graphName: String, configMap: java.util.HashMap[String, AnyRef]): java.util.HashMap[String, AnyRef] = {
-    if (isH2Database(configMap)) {
-      val dbUrl = configMap.get("db.default.url").asInstanceOf[String]
-      val dbUrlToks = dbUrl.split(H2Prefix)
-      val dbUrlPathToks = dbUrlToks(1).split(";")
-      dbUrlPathToks(0) = dbUrlPathToks(0) + s"_$graphName"
-      dbUrlToks(1) = dbUrlPathToks.mkString(";")
-      val newDbUrl = dbUrlToks.mkString(H2Prefix)
-      configMap.put("db.default.url", newDbUrl)
-    }
-    configMap
-  }
-
 
   override def clear(graph: Graph, configuration: Configuration): Unit =
     if (graph != null) {
@@ -72,26 +57,8 @@ class S2GraphProvider extends AbstractGraphProvider {
             s2Graph.management.truncateStorage(label.label)
           }
         }
-        s2Graph.shutdown()
+        s2Graph.shutdown(modelDataDelete = true)
         logger.info("S2Graph Shutdown")
-
-        val dbUrl = configuration.getString("db.default.url")
-        if (dbUrl.contains(H2Prefix)) {
-          dbUrl
-              .split(H2Prefix)
-              .lastOption
-              .flatMap { suffix =>
-                suffix.split(";").headOption
-              }
-              .foreach { dbFile =>
-                val f = new File(s"$dbFile.mv.db")
-                f.delete() match {
-                  case true => logger.info(s"Success to shutdown $dbUrl: $f was deleted")
-                  case _ => logger.info(s"Failed to delete $f")
-                }
-              }
-        }
-
       }
     }
 

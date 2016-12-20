@@ -76,8 +76,8 @@ object ServiceColumn extends Model[ServiceColumn] {
       expireCaches(key)
     }
   }
-  def findOrInsert(serviceId: Int, columnName: String, columnType: Option[String], schemaVersion: String = HBaseType.DEFAULT_VERSION)(implicit session: DBSession = AutoSession): ServiceColumn = {
-    find(serviceId, columnName) match {
+  def findOrInsert(serviceId: Int, columnName: String, columnType: Option[String], schemaVersion: String = HBaseType.DEFAULT_VERSION, useCache: Boolean = true)(implicit session: DBSession = AutoSession): ServiceColumn = {
+    find(serviceId, columnName, useCache) match {
       case Some(sc) => sc
       case None =>
         insert(serviceId, columnName, columnType, schemaVersion)
