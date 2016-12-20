@@ -8,14 +8,12 @@ import org.apache.commons.configuration.Configuration
 import org.apache.s2graph.core.Management.JsonModel.Prop
 import org.apache.s2graph.core._
 import org.apache.s2graph.core.mysqls.{Label, ServiceColumn}
-import org.apache.s2graph.core.types.HBaseType._
 import org.apache.s2graph.core.types.{VertexId, HBaseType, InnerVal}
 import org.apache.tinkerpop.gremlin.LoadGraphWith.GraphData
-import org.apache.tinkerpop.gremlin.structure.{T, Element, Graph, Edge}
-import org.apache.tinkerpop.gremlin.{LoadGraphWith, AbstractGraphProvider, GraphManager}
-import sun.security.provider.certpath.Vertex
+import org.apache.tinkerpop.gremlin.structure.{T, Element, Graph}
+import org.apache.tinkerpop.gremlin.{LoadGraphWith, AbstractGraphProvider}
 import scala.collection.JavaConverters._
-import scala.util.{Random, Failure, Try, Success}
+import scala.util.{Success, Failure, Try}
 
 import com.typesafe.config.ConfigFactory
 import org.apache.commons.io.FileUtils
@@ -38,12 +36,31 @@ class S2GraphProvider extends AbstractGraphProvider {
     val dbUrl =
       if (config.hasPath("db.default.url")) config.getString("db.default.url")
       else "jdbc:mysql://localhost:3306/graph_dev"
+
     val m = new java.util.HashMap[String, AnyRef]()
     m.put(Graph.GRAPH, classOf[S2Graph].getName)
     m.put("db.default.url", dbUrl)
     m.put("db.default.driver", "com.mysql.jdbc.Driver")
-    m
+    convertH2DatabaseUrl(s, m)
   }
+
+  private val H2Prefix = "jdbc:h2:file:"
+  private def isH2Database(configMap: java.util.HashMap[String, AnyRef]): Boolean = {
+    configMap.get("db.default.url").asInstanceOf[String].contains(H2Prefix)
+  }
+  private def convertH2DatabaseUrl(graphName: String, configMap: java.util.HashMap[String, AnyRef]): java.util.HashMap[String, AnyRef] = {
+    if (isH2Database(configMap)) {
+      val dbUrl = configMap.get("db.default.url").asInstanceOf[String]
+      val dbUrlToks = dbUrl.split(H2Prefix)
+      val dbUrlPathToks = dbUrlToks(1).split(";")
+      dbUrlPathToks(0) = dbUrlPathToks(0) + s"_$graphName"
+      dbUrlToks(1) = dbUrlPathToks.mkString(";")
+      val newDbUrl = dbUrlToks.mkString(H2Prefix)
+      configMap.put("db.default.url", newDbUrl)
+    }
+    configMap
+  }
+
 
   override def clear(graph: Graph, configuration: Configuration): Unit =
     if (graph != null) {
@@ -56,25 +73,25 @@ class S2GraphProvider extends AbstractGraphProvider {
           }
         }
         s2Graph.shutdown()
+        logger.info("S2Graph Shutdown")
 
         val dbUrl = configuration.getString("db.default.url")
-        val prefix = "jdbc:h2:file:"
-        if (dbUrl.contains(prefix)) {
+        if (dbUrl.contains(H2Prefix)) {
           dbUrl
-              .split(prefix)
+              .split(H2Prefix)
               .lastOption
               .flatMap { suffix =>
                 suffix.split(";").headOption
               }
               .foreach { dbFile =>
-                val f = new File(dbFile)
-                Try(FileUtils.deleteDirectory(f)) match {
-                  case Success(_) => logger.info(s"Success to shutdown $dbUrl: $dbFile was deleted")
-                  case Failure(e) => logger.info(s"Failed to shutdown $dbUrl: $e")
+                val f = new File(s"$dbFile.mv.db")
+                f.delete() match {
+                  case true => logger.info(s"Success to shutdown $dbUrl: $f was deleted")
+                  case _ => logger.info(s"Failed to delete $f")
                 }
               }
         }
-        logger.info("S2Graph Shutdown")
+
       }
     }
 
@@ -83,6 +100,8 @@ class S2GraphProvider extends AbstractGraphProvider {
   override def loadGraphData(graph: Graph, loadGraphWith: LoadGraphWith, testClass: Class[_], testName: String): Unit = {
     val s2Graph = graph.asInstanceOf[S2Graph]
     val mnt = s2Graph.getManagement()
+
+    logger.info(s"LoadGraphData => testClass: $testClass TestName: $testName")
 
     val service = s2Graph.DefaultService
     val column = s2Graph.DefaultColumn
