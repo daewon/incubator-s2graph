@@ -40,7 +40,7 @@ object S2Property {
       ElementHelper.validateProperty(key, value)
       if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
       if (!key.isInstanceOf[String]) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
-      if (value.isInstanceOf[Seq[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
+      if (value.isInstanceOf[Iterable[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
       if (value.isInstanceOf[Array[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
 
       keySet.add(key)
