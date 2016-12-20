@@ -115,32 +115,30 @@ class S2GraphProvider extends AbstractGraphProvider {
     val created = mnt.createLabel("created", service.serviceName, "person", "integer", service.serviceName, "software", "integer",
       true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "double")), "strong", None, None)
 
-    val knowsShouldEvaluateConnectivityPatterns = mnt.createLabel("knowsShouldEvaluateConnectivityPatterns", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil,
-      Seq(
-        Prop("aKey", "", "string")
-      ), "weak", None, None,
-      options = Option("""{"skipReverse": false}"""))
-
-    val knows = mnt.createLabel("knows", service.serviceName, "person", "integer", service.serviceName, "person", "integer",
-      true, service.serviceName, Nil,
-      Seq(
-        Prop("weight", "0.0", "double"),
-        Prop("data", "-", "string"),
-        Prop("year", "-1", "integer"),
-        Prop("boolean", "false", "boolean"),
-        Prop("float", "0.0", "float"),
-        Prop("double", "0.0", "double"),
-        Prop("long", "0.0", "long"),
-        Prop("string", "-", "string"),
-        Prop("integer", "-", "integer"),
-        Prop("aKey", "", "string")
-      ),
-      "strong",
-      None,
-      None,
-      options = Option("""{"skipReverse": true}""")
+    Management.deleteLabel("knows")
+    val knowsProp = Seq(
+      Prop("weight", "0.0", "double"),
+      Prop("data", "-", "string"),
+      Prop("year", "-1", "integer"),
+      Prop("boolean", "false", "boolean"),
+      Prop("float", "0.0", "float"),
+      Prop("double", "0.0", "double"),
+      Prop("long", "0.0", "long"),
+      Prop("string", "-", "string"),
+      Prop("integer", "-", "integer"),
+      Prop("aKey", "", "string")
     )
+
+    if (testClass.getSimpleName == "EdgeTest" && testName == "shouldAutotypeDoubleProperties") {
+      mnt.createLabel("knows", service.serviceName, "vertex", "string", service.serviceName, "vertex", "string",
+        true, service.serviceName, Nil, knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}""")
+      )
+    } else {
+      mnt.createLabel("knows", service.serviceName, "person", "integer", service.serviceName, "person", "integer",
+        true, service.serviceName, Nil,
+        knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}""")
+      )
+    }
 
     val bought = mnt.createLabel("bought", service.serviceName, "person", "integer", service.serviceName, "product", "integer",
       true, service.serviceName, Nil, Seq(Prop("x", "-", "string"), Prop("y", "-", "string")), "strong", None, None,
@@ -209,10 +207,7 @@ class S2GraphProvider extends AbstractGraphProvider {
   }
 
   override def convertLabel(label: String): String = {
-    label match {
-      case "knows" => "knowsShouldEvaluateConnectivityPatterns"
-      case _ => label
-    }
+    super.convertLabel(label)
   }
 }
 //public class TinkerGraphProvider extends AbstractGraphProvider {

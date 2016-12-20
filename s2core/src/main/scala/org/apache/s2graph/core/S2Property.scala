@@ -41,8 +41,8 @@ object S2Property {
 //      if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
       if (!key.isInstanceOf[String])
         throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
-      if (!value.isInstanceOf[String])
-        throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
+//      if (!value.isInstanceOf[String])
+//        throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
 
       keySet.add(key)
       result = result + (key -> value)
