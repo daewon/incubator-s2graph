@@ -38,19 +38,18 @@ object S2Property {
       val key = pair.getValue0
       val value = pair.getValue1
       ElementHelper.validateProperty(key, value)
-//      if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
-      if (!key.isInstanceOf[String])
-        throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
-//      if (!value.isInstanceOf[String])
-//        throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
+      if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
+      if (!key.isInstanceOf[String]) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+      if (value.isInstanceOf[Seq[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
+      if (value.isInstanceOf[Array[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
 
       keySet.add(key)
       result = result + (key -> value)
     }
+
     result
+
 //    ElementHelper.asMap(kvs: _*).asScala.toMap
-
-
 //    if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
 //    if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
 //    if (!kvs.grouped(2).map(_.head).forall(e => e.isInstanceOf[String] || e == T.id || e == T.label)) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()

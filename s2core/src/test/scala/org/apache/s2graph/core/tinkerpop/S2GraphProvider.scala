@@ -153,11 +153,18 @@ class S2GraphProvider extends AbstractGraphProvider {
       options = Option("""{"skipReverse": true}"""))
 
     val friends = mnt.createLabel("friends", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None,
+      true, service.serviceName, Nil, Nil,
+      "weak", None, None,
       options = Option("""{"skipReverse": true}"""))
 
     val friend = mnt.createLabel("friend", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None,
+      true, service.serviceName, Nil,
+      Seq(
+        Prop("name", "-", "string"),
+        Prop("location", "-", "string"),
+        Prop("status", "-", "string")
+      ),
+      "weak", None, None,
       options = Option("""{"skipReverse": false}""")
     )
 
@@ -207,7 +214,7 @@ class S2GraphProvider extends AbstractGraphProvider {
   }
 
   override def convertLabel(label: String): String = {
-    super.convertLabel(label)
+    label
   }
 }
 //public class TinkerGraphProvider extends AbstractGraphProvider {
