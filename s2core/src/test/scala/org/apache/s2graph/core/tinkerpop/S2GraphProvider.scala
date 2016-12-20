@@ -96,13 +96,6 @@ class S2GraphProvider extends AbstractGraphProvider {
     val created = mnt.createLabel("created", service.serviceName, "person", "integer", service.serviceName, "software", "integer",
       true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "double")), "strong", None, None)
 
-    val knowsShouldEvaluateConnectivityPatterns = mnt.createLabel("knowsShouldEvaluateConnectivityPatterns", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil,
-      Seq(
-        Prop("aKey", "", "string")
-      ), "weak", None, None,
-      options = Option("""{"skipReverse": false}"""))
-
     val knows = mnt.createLabel("knows", service.serviceName, "person", "integer", service.serviceName, "person", "integer",
       true, service.serviceName, Nil,
       Seq(
@@ -190,10 +183,7 @@ class S2GraphProvider extends AbstractGraphProvider {
   }
 
   override def convertLabel(label: String): String = {
-    label match {
-      case "knows" => "knowsShouldEvaluateConnectivityPatterns"
-      case _ => label
-    }
+    super.convertLabel(label)
   }
 }
 //public class TinkerGraphProvider extends AbstractGraphProvider {
