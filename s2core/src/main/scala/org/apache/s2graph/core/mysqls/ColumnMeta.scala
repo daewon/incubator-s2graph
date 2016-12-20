@@ -57,11 +57,16 @@ object ColumnMeta extends Model[ColumnMeta] {
     }
   }
 
-  def findByName(columnId: Int, name: String)(implicit session: DBSession = AutoSession) = {
+  def findByName(columnId: Int, name: String, useCache: Boolean = true)(implicit session: DBSession = AutoSession) = {
     //    val cacheKey = s"columnId=$columnId:name=$name"
     val cacheKey = "columnId=" + columnId + ":name=" + name
-    withCache(cacheKey)( sql"""select * from column_metas where column_id = ${columnId} and name = ${name}"""
-      .map { rs => ColumnMeta(rs) }.single.apply())
+    if (useCache) {
+      withCache(cacheKey)( sql"""select * from column_metas where column_id = ${columnId} and name = ${name}"""
+          .map { rs => ColumnMeta(rs) }.single.apply())
+    } else {
+      sql"""select * from column_metas where column_id = ${columnId} and name = ${name}"""
+          .map { rs => ColumnMeta(rs) }.single.apply()
+    }
   }
 
   def insert(columnId: Int, name: String, dataType: String)(implicit session: DBSession = AutoSession) = {
@@ -74,8 +79,8 @@ object ColumnMeta extends Model[ColumnMeta] {
     }
   }
 
-  def findOrInsert(columnId: Int, name: String, dataType: String)(implicit session: DBSession = AutoSession): ColumnMeta = {
-    findByName(columnId, name) match {
+  def findOrInsert(columnId: Int, name: String, dataType: String, useCache: Boolean = true)(implicit session: DBSession = AutoSession): ColumnMeta = {
+    findByName(columnId, name, useCache) match {
       case Some(c) => c
       case None =>
         insert(columnId, name, dataType)

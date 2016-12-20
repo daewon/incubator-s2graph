@@ -112,9 +112,36 @@ object Model {
     }
   }
 
-  def shutdown() = {
-    if (ModelReferenceCount.decrementAndGet() <= 0) ConnectionPool.closeAll()
-  }
+  def shutdown(modelDataDelete: Boolean = false) =
+    if (ModelReferenceCount.decrementAndGet() <= 0) {
+      // FIXME: When Model is served by embedded database and deleteData is set, Model deletes
+      // the underlying database. Its purpose is clearing runtime footprint when running tests.
+      if (modelDataDelete) {
+        withTx { implicit session =>
+          sql"SHOW TABLES"
+              .map(rs => rs.string(1))
+              .list
+              .apply()
+              .map { table => s"TRUNCATE TABLE $table" }
+        } match {
+          case Success(stmts) =>
+            val newStmts = List("SET FOREIGN_KEY_CHECKS = 0") ++ stmts ++ List("SET FOREIGN_KEY_CHECKS = 1")
+            withTx { implicit session =>
+              newStmts.foreach { stmt =>
+                session.execute(stmt)
+              }
+            } match {
+              case Success(_) =>
+                logger.info(s"Success to truncate models: $stmts")
+              case Failure(e) =>
+                throw new IllegalStateException(s"Failed to truncate models", e)
+            }
+          case Failure(e) =>
+            throw new IllegalStateException(s"Failed to list models", e)
+        }
+      }
+      ConnectionPool.closeAll()
+    }
 
   def loadCache() = {
     Service.findAll()

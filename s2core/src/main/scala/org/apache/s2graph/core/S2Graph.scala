@@ -656,23 +656,23 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
 
   /* TODO */
   val DefaultService = management.createService("_s2graph", "localhost", "s2graph", 0, None).get
-  val DefaultColumn = ServiceColumn.findOrInsert(DefaultService.id.get, "vertex", Some("string"), HBaseType.DEFAULT_VERSION)
+  val DefaultColumn = ServiceColumn.findOrInsert(DefaultService.id.get, "vertex", Some("string"), HBaseType.DEFAULT_VERSION, useCache = false)
   val DefaultColumnMetas = {
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "test", "string")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "name", "string")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "age", "integer")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "lang", "string")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "oid", "integer")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "communityIndex", "integer")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "test", "string")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "testing", "string")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "string", "string")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "boolean", "boolean")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "long", "long")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "float", "float")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "double", "double")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "integer", "integer")
-    ColumnMeta.findOrInsert(DefaultColumn.id.get, "aKey", "string")
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "test", "string", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "name", "string", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "age", "integer", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "lang", "string", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "oid", "integer", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "communityIndex", "integer", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "test", "string", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "testing", "string", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "string", "string", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "boolean", "boolean", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "long", "long", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "float", "float", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "double", "double", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "integer", "integer", useCache = false)
+    ColumnMeta.findOrInsert(DefaultColumn.id.get, "aKey", "string", useCache = false)
   }
 
   val DefaultLabel = management.createLabel("_s2graph", DefaultService.serviceName, DefaultColumn.columnName, DefaultColumn.columnType,
@@ -1158,10 +1158,11 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
   }
 
   def isRunning(): Boolean = running.get()
-  def shutdown(): Unit =
+
+  def shutdown(modelDataDelete: Boolean = false): Unit =
     if (running.compareAndSet(true, false)) {
       flushStorage()
-      Model.shutdown()
+      Model.shutdown(modelDataDelete)
       defaultStorage.shutdown()
     }
 
