@@ -20,16 +20,18 @@
 package org.apache.s2graph.core
 
 import java.util
-import java.util.function.{Consumer, BiConsumer}
+import java.util.function.{BiConsumer, Consumer}
 
 import org.apache.s2graph.core.GraphExceptions.LabelNotExistException
 import org.apache.s2graph.core.S2Vertex.Props
 import org.apache.s2graph.core.mysqls._
 import org.apache.s2graph.core.types._
 import org.apache.tinkerpop.gremlin.structure.Edge.Exceptions
+import org.apache.tinkerpop.gremlin.structure.Graph.Features.{ElementFeatures, VertexFeatures}
 import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
-import org.apache.tinkerpop.gremlin.structure.{T, Vertex, Edge, Property, VertexProperty, Direction}
+import org.apache.tinkerpop.gremlin.structure.{Direction, Edge, Property, T, Vertex, VertexProperty}
 import play.api.libs.json.Json
+
 import scala.collection.JavaConverters._
 
 case class S2Vertex(graph: S2Graph,

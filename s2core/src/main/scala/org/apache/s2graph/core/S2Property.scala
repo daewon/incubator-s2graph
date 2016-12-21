@@ -22,8 +22,10 @@ package org.apache.s2graph.core
 
 import org.apache.s2graph.core.mysqls.LabelMeta
 import org.apache.s2graph.core.types.{CanInnerValLike, InnerValLikeWithTs}
+import org.apache.tinkerpop.gremlin.structure.Graph.Features
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper
 import org.apache.tinkerpop.gremlin.structure._
+
 import scala.util.hashing.MurmurHash3
 
 object S2Property {
