@@ -85,7 +85,7 @@ object ColumnMeta extends Model[ColumnMeta] {
       case None =>
         insert(columnId, name, dataType)
         expireCache(s"columnId=$columnId:name=$name")
-        findByName(columnId, name, useCache = false).get
+        findByName(columnId, name).get
     }
   }
 
@@ -103,7 +103,7 @@ object ColumnMeta extends Model[ColumnMeta] {
     val columnMeta = findById(id)
     val (columnId, name) = (columnMeta.columnId, columnMeta.name)
     sql"""delete from column_metas where id = ${id}""".execute.apply()
-    val cacheKeys = List(s"id=$id", s"columnId=$columnId:name=$name", s"colunmId=$columnId")
+    val cacheKeys = List(s"id=$id", s"columnId=$columnId:name=$name", s"columnId=$columnId")
     cacheKeys.foreach { key =>
       expireCache(key)
       expireCaches(key)

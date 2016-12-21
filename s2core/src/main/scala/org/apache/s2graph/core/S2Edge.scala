@@ -428,7 +428,7 @@ case class S2Edge(innerGraph: S2Graph,
 
 //    val newLabelWithDir = LabelWithDirection(labelWithDir.labelId, GraphUtil.directions("out"))
 
-    property(LabelMeta.timestamp.name, ts, ts)
+    propertyInner(LabelMeta.timestamp.name, ts, ts)
     val ret = SnapshotEdge(innerGraph, smaller, larger, innerLabel,
       GraphUtil.directions("out"), op, version, propsWithTs,
       pendingEdgeOpt = pendingEdgeOpt, statusCode = statusCode, lockTs = lockTs, tsInnerValOpt = tsInnerValOpt)
@@ -516,14 +516,14 @@ case class S2Edge(innerGraph: S2Graph,
     val edge = new S2Edge(innerGraph, srcVertex, tgtVertex, innerLabel, dir, op, version, S2Edge.EmptyProps,
       parentEdges, originalEdgeOpt, pendingEdgeOpt, statusCode, lockTs, tsInnerValOpt)
     S2Edge.fillPropsWithTs(edge, propsWithTs)
-    edge.property(LabelMeta.timestamp.name, ts, ts)
+    edge.propertyInner(LabelMeta.timestamp.name, ts, ts)
     edge
   }
 
   def copyEdgeWithState(state: State, ts: Long): S2Edge = {
     val newEdge = copy(propsWithTs = S2Edge.EmptyProps)
     S2Edge.fillPropsWithTs(newEdge, state)
-    newEdge.property(LabelMeta.timestamp.name, ts, ts)
+    newEdge.propertyInner(LabelMeta.timestamp.name, ts, ts)
     newEdge
   }
 
@@ -562,14 +562,14 @@ case class S2Edge(innerGraph: S2Graph,
     if (propsWithTs.containsKey(key)) propsWithTs.get(key).asInstanceOf[Property[V]]
     else {
       val default = innerLabel.metaPropsDefaultMapInner(labelMeta)
-      property(key, default.innerVal.value, default.ts).asInstanceOf[Property[V]]
+      propertyInner(key, default.innerVal.value, default.ts).asInstanceOf[Property[V]]
     }
   }
 
-  // just for tinkerpop
+  // just for tinkerpop: save to storage, do not use for internal
   override def property[V](key: String, value: V): Property[V] = {
     S2Property.assertValidProp(key, value)
-    val v = property(key, value, System.currentTimeMillis())
+    val v = propertyInner(key, value, System.currentTimeMillis())
 
     // FIXME: for test
     val newTs = props.get(LabelMeta.timestamp.name).map(_.toString.toLong + 1).getOrElse(System.currentTimeMillis())
@@ -581,7 +581,7 @@ case class S2Edge(innerGraph: S2Graph,
     v
   }
 
-  def property[V](key: String, value: V, ts: Long): Property[V] = {
+  def propertyInner[V](key: String, value: V, ts: Long): Property[V] = {
     val labelMeta = innerLabel.metaPropsInvMap.getOrElse(key, throw new RuntimeException(s"$key is not configured on Edge."))
     val newProp = new S2Property[V](this, labelMeta, key, value, ts)
     propsWithTs.put(key, newProp)
@@ -671,7 +671,7 @@ object S2Edge {
     state.foreach { case (k, v) => indexEdge.property(k.name, v.innerVal.value, v.ts) }
   }
   def fillPropsWithTs(edge: S2Edge, state: State): Unit = {
-    state.foreach { case (k, v) => edge.property(k.name, v.innerVal.value, v.ts) }
+    state.foreach { case (k, v) => edge.propertyInner(k.name, v.innerVal.value, v.ts) }
   }
 
   def propsToState(props: Props): State = {
@@ -682,7 +682,7 @@ object S2Edge {
 
   def stateToProps(edge: S2Edge, state: State): Props = {
     state.foreach { case (k, v) =>
-      edge.property(k.name, v.innerVal.value, v.ts)
+      edge.propertyInner(k.name, v.innerVal.value, v.ts)
     }
     edge.propsWithTs
   }
@@ -843,7 +843,7 @@ object S2Edge {
               propsWithTs = S2Edge.EmptyProps,
               op = GraphUtil.defaultOpByte
             )
-            newPropsWithTs.foreach { case (k, v) => newEdge.property(k.name, v.innerVal.value, v.ts) }
+            newPropsWithTs.foreach { case (k, v) => newEdge.propertyInner(k.name, v.innerVal.value, v.ts) }
 
             newEdge.relatedEdges.flatMap { relEdge => filterOutWithLabelOption(relEdge.edgesWithIndexValid) }
           }

@@ -1116,7 +1116,7 @@ abstract class Storage[Q, R](val graph: S2Graph,
   }
 
   def buildDegreePuts(edge: S2Edge, degreeVal: Long): Seq[SKeyValue] = {
-    edge.property(LabelMeta.degree.name, degreeVal, edge.ts)
+    edge.propertyInner(LabelMeta.degree.name, degreeVal, edge.ts)
     val kvs = edge.edgesWithIndexValid.flatMap { indexEdge =>
       indexEdgeSerializer(indexEdge).toKeyValues.map(_.copy(operation = SKeyValue.Put, durability = indexEdge.label.durability))
     }

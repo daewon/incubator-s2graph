@@ -51,7 +51,7 @@ case class S2Vertex(graph: S2Graph,
 
   def schemaVer = serviceColumn.schemaVersion
 
-  def serviceColumn = ServiceColumn.findById(id.colId)
+  def serviceColumn = ServiceColumn.findById(id.colId, useCache = false)
 
   def columnName = serviceColumn.columnName
 
@@ -151,6 +151,7 @@ case class S2Vertex(graph: S2Graph,
     graph.fetchEdges(this, labelNameList, direction.name())
   }
 
+  // do no save to storage
   def propertyInner[V](cardinality: Cardinality, key: String, value: V, objects: AnyRef*): VertexProperty[V] = {
     S2Property.assertValidProp(key, value)
 
@@ -268,7 +269,7 @@ object S2Vertex {
   }
 
   def fillPropsWithTs(vertex: S2Vertex, state: State): Unit = {
-    state.foreach { case (k, v) => vertex.property(Cardinality.single, k.name, v.value) }
+    state.foreach { case (k, v) => vertex.propertyInner(Cardinality.single, k.name, v.value) }
   }
 
   def propsToState(props: Props): State = {

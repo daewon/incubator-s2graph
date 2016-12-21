@@ -42,11 +42,16 @@ object ServiceColumn extends Model[ServiceColumn] {
 //    find(service.id.get, columnName, useCache)
 //  }
 
-  def findById(id: Int)(implicit session: DBSession = AutoSession): ServiceColumn = {
-//    val cacheKey = s"id=$id"
+  def findById(id: Int, useCache: Boolean = true)(implicit session: DBSession = AutoSession): ServiceColumn = {
     val cacheKey = "id=" + id
-    withCache(cacheKey)(sql"""select * from service_columns where id = ${id}""".map { x => ServiceColumn(x) }.single.apply).get
+
+    if (useCache) {
+      withCache(cacheKey)(sql"""select * from service_columns where id = ${id}""".map { x => ServiceColumn(x) }.single.apply).get
+    } else {
+      sql"""select * from service_columns where id = ${id}""".map { x => ServiceColumn(x) }.single.apply.get
+    }
   }
+
   def find(serviceId: Int, columnName: String, useCache: Boolean = true)(implicit session: DBSession = AutoSession): Option[ServiceColumn] = {
 //    val cacheKey = s"serviceId=$serviceId:columnName=$columnName"
     val cacheKey = "serviceId=" + serviceId + ":columnName=" + columnName
@@ -67,7 +72,7 @@ object ServiceColumn extends Model[ServiceColumn] {
          values(${serviceId}, ${columnName}, ${columnType}, ${schemaVersion})""".execute.apply()
   }
   def delete(id: Int)(implicit session: DBSession = AutoSession) = {
-    val serviceColumn = findById(id)
+    val serviceColumn = findById(id, useCache = false)
     val (serviceId, columnName) = (serviceColumn.serviceId, serviceColumn.columnName)
     sql"""delete from service_columns where id = ${id}""".execute.apply()
     val cacheKeys = List(s"id=$id", s"serviceId=$serviceId:columnName=$columnName")
