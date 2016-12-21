@@ -85,7 +85,7 @@ object ColumnMeta extends Model[ColumnMeta] {
       case None =>
         insert(columnId, name, dataType)
         expireCache(s"columnId=$columnId:name=$name")
-        findByName(columnId, name).get
+        findByName(columnId, name, useCache = false).get
     }
   }
 

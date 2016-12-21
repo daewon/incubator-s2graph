@@ -5,20 +5,18 @@ import java.util
 import java.util.concurrent.atomic.AtomicLong
 
 import org.apache.commons.configuration.Configuration
-
 import org.apache.s2graph.core.Management.JsonModel.Prop
 import org.apache.s2graph.core._
-import org.apache.s2graph.core.mysqls.{Label, ServiceColumn}
-import org.apache.s2graph.core.types.{VertexId, HBaseType, InnerVal}
+import org.apache.s2graph.core.mysqls.{ColumnMeta, Label, ServiceColumn}
+import org.apache.s2graph.core.types.{HBaseType, InnerVal, VertexId}
 import org.apache.tinkerpop.gremlin.LoadGraphWith.GraphData
-import org.apache.tinkerpop.gremlin.structure.{T, Element, Graph}
-import org.apache.tinkerpop.gremlin.{LoadGraphWith, AbstractGraphProvider}
-import scala.collection.JavaConverters._
-import scala.util.{Success, Failure, Try}
+import org.apache.tinkerpop.gremlin.structure.{Element, Graph, T}
+import org.apache.tinkerpop.gremlin.{AbstractGraphProvider, LoadGraphWith}
 
+import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 import com.typesafe.config.ConfigFactory
 import org.apache.commons.io.FileUtils
-
 import org.apache.s2graph.core.utils.logger
 
 object S2GraphProvider {
@@ -34,10 +32,11 @@ class S2GraphProvider extends AbstractGraphProvider {
 
   override def getBaseConfiguration(s: String, aClass: Class[_], s1: String, graphData: GraphData): util.Map[String, AnyRef] = {
     val config = ConfigFactory.load()
-    val dbUrl =
-      if (config.hasPath("db.default.url")) config.getString("db.default.url")
-      else "jdbc:mysql://localhost:3306/graph_dev"
+//    val dbUrl =
+//      if (config.hasPath("db.default.url")) config.getString("db.default.url")
+//      else "jdbc:mysql://localhost:3306/graph_dev"
 
+    val dbUrl = "jdbc:mysql://localhost:3306/graph_dev"
     val m = new java.util.HashMap[String, AnyRef]()
     m.put(Graph.GRAPH, classOf[S2Graph].getName)
     m.put("db.default.url", dbUrl)
@@ -67,23 +66,14 @@ class S2GraphProvider extends AbstractGraphProvider {
   override def loadGraphData(graph: Graph, loadGraphWith: LoadGraphWith, testClass: Class[_], testName: String): Unit = {
     val s2Graph = graph.asInstanceOf[S2Graph]
     val mnt = s2Graph.getManagement()
-
-    logger.info(s"LoadGraphData => testClass: $testClass TestName: $testName")
-
     val service = s2Graph.DefaultService
     val column = s2Graph.DefaultColumn
 
-    val personColumn = Management.createServiceColumn(service.serviceName, "person", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "0", "integer"), Prop("location", "-", "string")))
-    val softwareColumn = Management.createServiceColumn(service.serviceName, "software", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("lang", "-", "string")))
-    val productColumn = Management.createServiceColumn(service.serviceName, "product", "integer", Nil)
-    val dogColumn = Management.createServiceColumn(service.serviceName, "dog", "integer", Nil)
-//    val vertexColumn = Management.createServiceColumn(service.serviceName, "vertex", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "-1", "integer"), Prop("lang", "scala", "string")))
-
-    val created = mnt.createLabel("created", service.serviceName, "person", "integer", service.serviceName, "software", "integer",
-      true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "double")), "strong", None, None)
+    logger.info(s"LoadGraphData => testClass: $testClass TestName: $testName")
 
     Management.deleteLabel("knows")
-    val knowsProp = Seq(
+
+    var knowsProp = Vector(
       Prop("weight", "0.0", "double"),
       Prop("data", "-", "string"),
       Prop("year", "-1", "integer"),
@@ -93,19 +83,57 @@ class S2GraphProvider extends AbstractGraphProvider {
       Prop("long", "0.0", "long"),
       Prop("string", "-", "string"),
       Prop("integer", "-", "integer"),
-      Prop("aKey", "", "string")
+      Prop("aKey", "-", "string")
     )
 
+   // Change dataType for ColumnMeta('aKey') for PropertyFeatureSupportTest
+    if (testClass.getSimpleName == "PropertyFeatureSupportTest") {
+      knowsProp = knowsProp.filterNot(_.name == "aKey")
+
+      val dataType = if (testName.toLowerCase.contains("boolean")) {
+        knowsProp = knowsProp.filterNot(_.name == "aKey") :+ Prop("aKey", "false", "boolean")
+        "boolean"
+      } else if (testName.toLowerCase.contains("integer")) {
+        knowsProp = knowsProp.filterNot(_.name == "aKey") :+ Prop("aKey", "0", "integer")
+        "integer"
+      } else if (testName.toLowerCase.contains("long")) {
+        knowsProp = knowsProp.filterNot(_.name == "aKey") :+ Prop("aKey", "0", "long")
+        "long"
+      } else if (testName.toLowerCase.contains("double")) {
+        knowsProp = knowsProp.filterNot(_.name == "aKey") :+ Prop("aKey", "0.0", "double")
+        "double"
+      } else if (testName.toLowerCase.contains("float")) {
+        knowsProp = knowsProp.filterNot(_.name == "aKey") :+ Prop("aKey", "0.0", "float")
+        "float"
+      } else if (testName.toLowerCase.contains("string")) {
+        knowsProp = knowsProp.filterNot(_.name == "aKey") :+ Prop("aKey", "-", "string")
+        "string"
+      } else {
+        "string"
+      }
+
+      val DefaultColumn = s2Graph.DefaultColumn
+      ColumnMeta.findByName(DefaultColumn.id.get, "aKey", useCache = false).foreach(cm => ColumnMeta.delete(cm.id.get))
+      ColumnMeta.findOrInsert(DefaultColumn.id.get, "aKey", dataType, useCache = false)
+    }
+
+    // knows props
     if (testClass.getSimpleName == "EdgeTest" && testName == "shouldAutotypeDoubleProperties") {
       mnt.createLabel("knows", service.serviceName, "vertex", "string", service.serviceName, "vertex", "string",
-        true, service.serviceName, Nil, knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}""")
-      )
+        true, service.serviceName, Nil, knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}"""))
     } else {
       mnt.createLabel("knows", service.serviceName, "person", "integer", service.serviceName, "person", "integer",
-        true, service.serviceName, Nil,
-        knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}""")
-      )
+        true, service.serviceName, Nil, knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}"""))
     }
+
+    val personColumn = Management.createServiceColumn(service.serviceName, "person", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "0", "integer"), Prop("location", "-", "string")))
+    val softwareColumn = Management.createServiceColumn(service.serviceName, "software", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("lang", "-", "string")))
+    val productColumn = Management.createServiceColumn(service.serviceName, "product", "integer", Nil)
+    val dogColumn = Management.createServiceColumn(service.serviceName, "dog", "integer", Nil)
+//    val vertexColumn = Management.createServiceColumn(service.serviceName, "vertex", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "-1", "integer"), Prop("lang", "scala", "string")))
+
+    val created = mnt.createLabel("created", service.serviceName, "person", "integer", service.serviceName, "software", "integer",
+      true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "double")), "strong", None, None)
 
     val bought = mnt.createLabel("bought", service.serviceName, "person", "integer", service.serviceName, "product", "integer",
       true, service.serviceName, Nil, Seq(Prop("x", "-", "string"), Prop("y", "-", "string")), "strong", None, None,

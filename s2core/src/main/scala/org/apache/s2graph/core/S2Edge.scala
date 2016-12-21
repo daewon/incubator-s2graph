@@ -569,20 +569,16 @@ case class S2Edge(innerGraph: S2Graph,
   // just for tinkerpop
   override def property[V](key: String, value: V): Property[V] = {
     S2Property.assertValidProp(key, value)
-    value match {
-      case _: String =>
-        val v = property(key, value, System.currentTimeMillis())
+    val v = property(key, value, System.currentTimeMillis())
 
-        // FIXME: for test
-        val newTs = props.get(LabelMeta.timestamp.name).map(_.toString.toLong + 1).getOrElse(System.currentTimeMillis())
+    // FIXME: for test
+    val newTs = props.get(LabelMeta.timestamp.name).map(_.toString.toLong + 1).getOrElse(System.currentTimeMillis())
 
-        val newProp = new S2Property(this, LabelMeta.timestamp, LabelMeta.timestamp.name, newTs, newTs)
-        propsWithTs.put(LabelMeta.timestamp.name, newProp)
-        Await.result(innerGraph.mutateEdges(Seq(this.copy(version = this.version + 1)), true), innerGraph.WaitTimeout)
+    val newProp = new S2Property(this, LabelMeta.timestamp, LabelMeta.timestamp.name, newTs, newTs)
+    propsWithTs.put(LabelMeta.timestamp.name, newProp)
+    Await.result(innerGraph.mutateEdges(Seq(this.copy(version = this.version + 1)), true), innerGraph.WaitTimeout)
 
-        v
-      case _ => throw Property.Exceptions.dataTypeOfPropertyValueNotSupported(value)
-    }
+    v
   }
 
   def property[V](key: String, value: V, ts: Long): Property[V] = {
