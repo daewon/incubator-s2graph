@@ -41,36 +41,29 @@ object S2Property {
       val value = pair.getValue1
       ElementHelper.validateProperty(key, value)
       if (keySet.contains(key)) throw VertexProperty.Exceptions.multiPropertiesNotSupported
-      if (!key.isInstanceOf[String]) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
-      if (value.isInstanceOf[Iterable[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
-      if (value.isInstanceOf[Array[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
-      if (value.isInstanceOf[java.util.List[_]]) throw throw new java.lang.IllegalArgumentException("not supported data type")
-      if (value.isInstanceOf[java.util.Map[_, _]])throw throw new java.lang.IllegalArgumentException("not supported data type")
+
+      assertValidProp(key, value)
 
       keySet.add(key)
       result = result + (key -> value)
     }
 
     result
-
-//    ElementHelper.asMap(kvs: _*).asScala.toMap
-//    if (kvs.contains(null)) throw Property.Exceptions.propertyValueCanNotBeNull()
-//    if (kvs.length % 2 != 0) throw Element.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()
-//    if (!kvs.grouped(2).map(_.head).forall(e => e.isInstanceOf[String] || e == T.id || e == T.label)) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
-//
-//    val props = ElementHelper.asMap(kvs: _*).asScala.toMap
-//    if (props.contains("")) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
-//
-//    props
   }
 
   def assertValidProp[A](key: Any, value: A): Unit = {
     if (key == null) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
     if (!key.isInstanceOf[String]) throw Element.Exceptions.providedKeyValuesMustHaveALegalKeyOnEvenIndices()
+
+    if (value == null) throw Property.Exceptions.propertyValueCanNotBeNull()
+    if (value.isInstanceOf[Iterable[_]]) throw new java.lang.IllegalArgumentException("not supported data type")
+    if (value.isInstanceOf[Array[_]]) throw new java.lang.IllegalArgumentException("not supported data type")
+    if (value.isInstanceOf[java.util.List[_]]) throw new java.lang.IllegalArgumentException("not supported data type")
+    if (value.isInstanceOf[java.util.Map[_, _]]) throw new java.lang.IllegalArgumentException("not supported data type")
+
     if (key.toString.isEmpty) throw Property.Exceptions.propertyKeyCanNotBeEmpty()
     if (Graph.Hidden.isHidden(key.toString)) throw Property.Exceptions.propertyKeyCanNotBeAHiddenKey(Graph.Hidden.hide(key.toString))
 
-    if (value == null) throw Property.Exceptions.propertyValueCanNotBeNull()
   }
 }
 
