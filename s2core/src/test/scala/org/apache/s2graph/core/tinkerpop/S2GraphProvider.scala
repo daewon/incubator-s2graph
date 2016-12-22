@@ -66,8 +66,8 @@ class S2GraphProvider extends AbstractGraphProvider {
   override def loadGraphData(graph: Graph, loadGraphWith: LoadGraphWith, testClass: Class[_], testName: String): Unit = {
     val s2Graph = graph.asInstanceOf[S2Graph]
     val mnt = s2Graph.getManagement()
-    val service = s2Graph.DefaultService
-    val column = s2Graph.DefaultColumn
+    val defaultService = s2Graph.DefaultService
+    val defaultServiceColumn = s2Graph.DefaultColumn
 
     logger.info(s"LoadGraphData => testClass: $testClass TestName: $testName")
 
@@ -112,48 +112,47 @@ class S2GraphProvider extends AbstractGraphProvider {
         "string"
       }
 
-      val DefaultColumn = s2Graph.DefaultColumn
-      ColumnMeta.findByName(DefaultColumn.id.get, "aKey", useCache = false).foreach(cm => ColumnMeta.delete(cm.id.get))
-      ColumnMeta.findOrInsert(DefaultColumn.id.get, "aKey", dataType, useCache = false)
+      ColumnMeta.findByName(defaultServiceColumn.id.get, "aKey", useCache = false).foreach(cm => ColumnMeta.delete(cm.id.get))
+      ColumnMeta.findOrInsert(defaultServiceColumn.id.get, "aKey", dataType, useCache = false)
     }
 
     // knows props
     if (testClass.getSimpleName == "EdgeTest" && testName == "shouldAutotypeDoubleProperties") {
-      mnt.createLabel("knows", service.serviceName, "vertex", "string", service.serviceName, "vertex", "string",
-        true, service.serviceName, Nil, knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}"""))
+      mnt.createLabel("knows", defaultService.serviceName, "vertex", "string", defaultService.serviceName, "vertex", "string",
+        true, defaultService.serviceName, Nil, knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}"""))
     } else {
-      mnt.createLabel("knows", service.serviceName, "person", "integer", service.serviceName, "person", "integer",
-        true, service.serviceName, Nil, knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}"""))
+      mnt.createLabel("knows", defaultService.serviceName, "person", "integer", defaultService.serviceName, "person", "integer",
+        true, defaultService.serviceName, Nil, knowsProp, "strong", None, None, options = Option("""{"skipReverse": true}"""))
     }
 
-    val personColumn = Management.createServiceColumn(service.serviceName, "person", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "0", "integer"), Prop("location", "-", "string")))
-    val softwareColumn = Management.createServiceColumn(service.serviceName, "software", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("lang", "-", "string")))
-    val productColumn = Management.createServiceColumn(service.serviceName, "product", "integer", Nil)
-    val dogColumn = Management.createServiceColumn(service.serviceName, "dog", "integer", Nil)
+    val personColumn = Management.createServiceColumn(defaultService.serviceName, "person", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "0", "integer"), Prop("location", "-", "string")))
+    val softwareColumn = Management.createServiceColumn(defaultService.serviceName, "software", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("lang", "-", "string")))
+    val productColumn = Management.createServiceColumn(defaultService.serviceName, "product", "integer", Nil)
+    val dogColumn = Management.createServiceColumn(defaultService.serviceName, "dog", "integer", Nil)
 //    val vertexColumn = Management.createServiceColumn(service.serviceName, "vertex", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "-1", "integer"), Prop("lang", "scala", "string")))
 
-    val created = mnt.createLabel("created", service.serviceName, "person", "integer", service.serviceName, "software", "integer",
-      true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "double")), "strong", None, None)
+    val created = mnt.createLabel("created", defaultService.serviceName, "person", "integer", defaultService.serviceName, "software", "integer",
+      true, defaultService.serviceName, Nil, Seq(Prop("weight", "0.0", "double")), "strong", None, None)
 
-    val bought = mnt.createLabel("bought", service.serviceName, "person", "integer", service.serviceName, "product", "integer",
-      true, service.serviceName, Nil, Seq(Prop("x", "-", "string"), Prop("y", "-", "string")), "strong", None, None,
+    val bought = mnt.createLabel("bought", defaultService.serviceName, "person", "integer", defaultService.serviceName, "product", "integer",
+      true, defaultService.serviceName, Nil, Seq(Prop("x", "-", "string"), Prop("y", "-", "string")), "strong", None, None,
       options = Option("""{"skipReverse": true}"""))
 
-    val test = mnt.createLabel("test", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Seq(Prop("xxx", "-", "string")), "weak", None, None,
+    val test = mnt.createLabel("test", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil, Seq(Prop("xxx", "-", "string")), "weak", None, None,
       options = Option("""{"skipReverse": true}"""))
 
-    val self = mnt.createLabel("self", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None,
+    val self = mnt.createLabel("self", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil, Nil, "weak", None, None,
       options = Option("""{"skipReverse": true}"""))
 
-    val friends = mnt.createLabel("friends", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil,
+    val friends = mnt.createLabel("friends", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil, Nil,
       "weak", None, None,
       options = Option("""{"skipReverse": true}"""))
 
-    val friend = mnt.createLabel("friend", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil,
+    val friend = mnt.createLabel("friend", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil,
       Seq(
         Prop("name", "-", "string"),
         Prop("location", "-", "string"),
@@ -163,13 +162,13 @@ class S2GraphProvider extends AbstractGraphProvider {
       options = Option("""{"skipReverse": false}""")
     )
 
-    val hate = mnt.createLabel("hate", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None,
+    val hate = mnt.createLabel("hate", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil, Nil, "weak", None, None,
       options = Option("""{"skipReverse": false}""")
     )
 
-    val collaborator = mnt.createLabel("collaborator", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil,
+    val collaborator = mnt.createLabel("collaborator", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil,
       Seq(
         Prop("location", "-", "string")
       ),
@@ -177,16 +176,16 @@ class S2GraphProvider extends AbstractGraphProvider {
        options = Option("""{"skipReverse": true}""")
     )
 
-    val test1 = mnt.createLabel("test1", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None,
+    val test1 = mnt.createLabel("test1", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil, Nil, "weak", None, None,
       options = Option("""{"skipReverse": false}""")
     )
-    val test2 = mnt.createLabel("test2", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None,
+    val test2 = mnt.createLabel("test2", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil, Nil, "weak", None, None,
       options = Option("""{"skipReverse": false}""")
     )
-    val test3 = mnt.createLabel("test3", service.serviceName, column.columnName, column.columnType, service.serviceName, column.columnName, column.columnType,
-      true, service.serviceName, Nil, Nil, "weak", None, None,
+    val test3 = mnt.createLabel("test3", defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType, defaultService.serviceName, defaultServiceColumn.columnName, defaultServiceColumn.columnType,
+      true, defaultService.serviceName, Nil, Nil, "weak", None, None,
       options = Option("""{"skipReverse": false}""")
     )
 
@@ -212,162 +211,3 @@ class S2GraphProvider extends AbstractGraphProvider {
     label
   }
 }
-//public class TinkerGraphProvider extends AbstractGraphProvider {
-//
-//  private static final Set<Class> IMPLEMENTATION = new HashSet<Class>() {{
-//        add(TinkerEdge.class);
-//        add(TinkerElement.class);
-//        add(TinkerGraph.class);
-//        add(TinkerGraphVariables.class);
-//        add(TinkerProperty.class);
-//        add(TinkerVertex.class);
-//        add(TinkerVertexProperty.class);
-//    }};
-//
-//  @Override
-//  public Map<String, Object> getBaseConfiguration(final String graphName, final Class<?> test, final String testMethodName,
-//  final LoadGraphWith.GraphData loadGraphWith) {
-//    final TinkerGraph.DefaultIdManager idManager = selectIdMakerFromGraphData(loadGraphWith);
-//    final String idMaker = (idManager.equals(TinkerGraph.DefaultIdManager.ANY) ? selectIdMakerFromTest(test, testMethodName) : idManager).name();
-//    return new HashMap<String, Object>() {{
-//            put(Graph.GRAPH, TinkerGraph.class.getName());
-//            put(TinkerGraph.GREMLIN_TINKERGRAPH_VERTEX_ID_MANAGER, idMaker);
-//            put(TinkerGraph.GREMLIN_TINKERGRAPH_EDGE_ID_MANAGER, idMaker);
-//            put(TinkerGraph.GREMLIN_TINKERGRAPH_VERTEX_PROPERTY_ID_MANAGER, idMaker);
-//            if (requiresListCardinalityAsDefault(loadGraphWith, test, testMethodName))
-//                put(TinkerGraph.GREMLIN_TINKERGRAPH_DEFAULT_VERTEX_PROPERTY_CARDINALITY, VertexProperty.Cardinality.list.name());
-//            if (requiresPersistence(test, testMethodName)) {
-//                put(TinkerGraph.GREMLIN_TINKERGRAPH_GRAPH_FORMAT, "gryo");
-//                final File tempDir = TestHelper.makeTestDataPath(test, "temp");
-//                put(TinkerGraph.GREMLIN_TINKERGRAPH_GRAPH_LOCATION,
-//                        tempDir.getAbsolutePath() + File.separator + testMethodName + ".kryo");
-//            }
-//        }};
-//  }
-//
-//  @Override
-//  public void clear(final Graph graph, final Configuration configuration) throws Exception {
-//    if (graph != null)
-//      graph.close();
-//
-//    // in the even the graph is persisted we need to clean up
-//    final String graphLocation = configuration.getString(TinkerGraph.GREMLIN_TINKERGRAPH_GRAPH_LOCATION, null);
-//    if (graphLocation != null) {
-//      final File f = new File(graphLocation);
-//      f.delete();
-//    }
-//  }
-//
-//  @Override
-//  public Set<Class> getImplementations() {
-//        return IMPLEMENTATION;
-//    }
-//
-//  /**
-//   * Determines if a test requires TinkerGraph persistence to be configured with graph location and format.
-//   */
-//  protected static boolean requiresPersistence(final Class<?> test, final String testMethodName) {
-//    return test == GraphTest.class && testMethodName.equals("shouldPersistDataOnClose");
-//  }
-//
-//  /**
-//   * Determines if a test requires a different cardinality as the default or not.
-//   */
-//  protected static boolean requiresListCardinalityAsDefault(final LoadGraphWith.GraphData loadGraphWith,
-//  final Class<?> test, final String testMethodName) {
-//    return loadGraphWith == LoadGraphWith.GraphData.CREW
-//    || (test == StarGraphTest.class && testMethodName.equals("shouldAttachWithCreateMethod"))
-//    || (test == DetachedGraphTest.class && testMethodName.equals("testAttachableCreateMethod"));
-//  }
-//
-//  /**
-//   * Some tests require special configuration for TinkerGraph to properly configure the id manager.
-//   */
-//  protected TinkerGraph.DefaultIdManager selectIdMakerFromTest(final Class<?> test, final String testMethodName) {
-//    if (test.equals(GraphTest.class)) {
-//      final Set<String> testsThatNeedLongIdManager = new HashSet<String>(){{
-//                add("shouldIterateVerticesWithNumericIdSupportUsingDoubleRepresentation");
-//                add("shouldIterateVerticesWithNumericIdSupportUsingDoubleRepresentations");
-//                add("shouldIterateVerticesWithNumericIdSupportUsingIntegerRepresentation");
-//                add("shouldIterateVerticesWithNumericIdSupportUsingIntegerRepresentations");
-//                add("shouldIterateVerticesWithNumericIdSupportUsingFloatRepresentation");
-//                add("shouldIterateVerticesWithNumericIdSupportUsingFloatRepresentations");
-//                add("shouldIterateVerticesWithNumericIdSupportUsingStringRepresentation");
-//                add("shouldIterateVerticesWithNumericIdSupportUsingStringRepresentations");
-//                add("shouldIterateEdgesWithNumericIdSupportUsingDoubleRepresentation");
-//                add("shouldIterateEdgesWithNumericIdSupportUsingDoubleRepresentations");
-//                add("shouldIterateEdgesWithNumericIdSupportUsingIntegerRepresentation");
-//                add("shouldIterateEdgesWithNumericIdSupportUsingIntegerRepresentations");
-//                add("shouldIterateEdgesWithNumericIdSupportUsingFloatRepresentation");
-//                add("shouldIterateEdgesWithNumericIdSupportUsingFloatRepresentations");
-//                add("shouldIterateEdgesWithNumericIdSupportUsingStringRepresentation");
-//                add("shouldIterateEdgesWithNumericIdSupportUsingStringRepresentations");
-//            }};
-//
-//      final Set<String> testsThatNeedUuidIdManager = new HashSet<String>(){{
-//                add("shouldIterateVerticesWithUuidIdSupportUsingStringRepresentation");
-//                add("shouldIterateVerticesWithUuidIdSupportUsingStringRepresentations");
-//                add("shouldIterateEdgesWithUuidIdSupportUsingStringRepresentation");
-//                add("shouldIterateEdgesWithUuidIdSupportUsingStringRepresentations");
-//            }};
-//
-//      if (testsThatNeedLongIdManager.contains(testMethodName))
-//        return TinkerGraph.DefaultIdManager.LONG;
-//      else if (testsThatNeedUuidIdManager.contains(testMethodName))
-//        return TinkerGraph.DefaultIdManager.UUID;
-//    }  else if (test.equals(IoEdgeTest.class)) {
-//      final Set<String> testsThatNeedLongIdManager = new HashSet<String>(){{
-//                add("shouldReadWriteEdge[graphson-v1]");
-//                add("shouldReadWriteDetachedEdgeAsReference[graphson-v1]");
-//                add("shouldReadWriteDetachedEdge[graphson-v1]");
-//                add("shouldReadWriteEdge[graphson-v2]");
-//                add("shouldReadWriteDetachedEdgeAsReference[graphson-v2]");
-//                add("shouldReadWriteDetachedEdge[graphson-v2]");
-//            }};
-//
-//      if (testsThatNeedLongIdManager.contains(testMethodName))
-//        return TinkerGraph.DefaultIdManager.LONG;
-//    } else if (test.equals(IoVertexTest.class)) {
-//      final Set<String> testsThatNeedLongIdManager = new HashSet<String>(){{
-//                add("shouldReadWriteVertexWithBOTHEdges[graphson-v1]");
-//                add("shouldReadWriteVertexWithINEdges[graphson-v1]");
-//                add("shouldReadWriteVertexWithOUTEdges[graphson-v1]");
-//                add("shouldReadWriteVertexNoEdges[graphson-v1]");
-//                add("shouldReadWriteDetachedVertexNoEdges[graphson-v1]");
-//                add("shouldReadWriteDetachedVertexAsReferenceNoEdges[graphson-v1]");
-//                add("shouldReadWriteVertexMultiPropsNoEdges[graphson-v1]");
-//                add("shouldReadWriteVertexWithBOTHEdges[graphson-v2]");
-//                add("shouldReadWriteVertexWithINEdges[graphson-v2]");
-//                add("shouldReadWriteVertexWithOUTEdges[graphson-v2]");
-//                add("shouldReadWriteVertexNoEdges[graphson-v2]");
-//                add("shouldReadWriteDetachedVertexNoEdges[graphson-v2]");
-//                add("shouldReadWriteDetachedVertexAsReferenceNoEdges[graphson-v2]");
-//                add("shouldReadWriteVertexMultiPropsNoEdges[graphson-v2]");
-//            }};
-//
-//      if (testsThatNeedLongIdManager.contains(testMethodName))
-//        return TinkerGraph.DefaultIdManager.LONG;
-//    }
-//
-//    return TinkerGraph.DefaultIdManager.ANY;
-//  }
-//
-//  /**
-//   * Test that load with specific graph data can be configured with a specific id manager as the data type to
-//   * be used in the test for that graph is known.
-//   */
-//  protected TinkerGraph.DefaultIdManager selectIdMakerFromGraphData(final LoadGraphWith.GraphData loadGraphWith) {
-//    if (null == loadGraphWith) return TinkerGraph.DefaultIdManager.ANY;
-//    if (loadGraphWith.equals(LoadGraphWith.GraphData.CLASSIC))
-//      return TinkerGraph.DefaultIdManager.INTEGER;
-//    else if (loadGraphWith.equals(LoadGraphWith.GraphData.MODERN))
-//      return TinkerGraph.DefaultIdManager.INTEGER;
-//    else if (loadGraphWith.equals(LoadGraphWith.GraphData.CREW))
-//      return TinkerGraph.DefaultIdManager.INTEGER;
-//    else if (loadGraphWith.equals(LoadGraphWith.GraphData.GRATEFUL))
-//    else if (loadGraphWith.equals(LoadGraphWith.GraphData.GRATEFUL))
-//      return TinkerGraph.DefaultIdManager.INTEGER;
-//    else
-//      throw new IllegalStateException(String.format("Need to define a new %s for %s", TinkerGraph.IdManager.class.getName(), loadGraphWith.name()));
-//  }
-//}
