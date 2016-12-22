@@ -133,52 +133,52 @@ class S2GraphTest extends FunSuite with Matchers with TestCommonWithModels {
 //    vertex.id.column.service.serviceName should be(g.DefaultService.serviceName)
 //    vertex.id.column.columnName should be(g.DefaultColumn.columnName)
 //  }
-  val s2Graph = graph.asInstanceOf[S2Graph]
-  val mnt = s2Graph.getManagement()
-  override val service = s2Graph.DefaultService
-
-  val personColumn = Management.createServiceColumn(service.serviceName, "person", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "0", "integer")))
-  val softwareColumn = Management.createServiceColumn(service.serviceName, "software", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("lang", "-", "string")))
-  //    val vertexColumn = Management.createServiceColumn(service.serviceName, "vertex", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "-1", "integer"), Prop("lang", "scala", "string")))
-
-  val created = mnt.createLabel("created", service.serviceName, "person", "integer", service.serviceName, "software", "integer",
-    true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "float")), "strong", None, None)
-
-  val knows = mnt.createLabel("knows", service.serviceName, "person", "integer", service.serviceName, "person", "integer",
-    true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "float")), "strong", None, None)
-
+//  val s2Graph = graph.asInstanceOf[S2Graph]
+//  val mnt = s2Graph.getManagement()
+//  override val service = s2Graph.DefaultService
+//
+//  val personColumn = Management.createServiceColumn(service.serviceName, "person", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "0", "integer")))
+//  val softwareColumn = Management.createServiceColumn(service.serviceName, "software", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("lang", "-", "string")))
+//  //    val vertexColumn = Management.createServiceColumn(service.serviceName, "vertex", "integer", Seq(Prop(T.id.toString, "-1", "integer"), Prop("name", "-", "string"), Prop("age", "-1", "integer"), Prop("lang", "scala", "string")))
+//
+//  val created = mnt.createLabel("created", service.serviceName, "person", "integer", service.serviceName, "software", "integer",
+//    true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "float")), "strong", None, None)
+//
+//  val knows = mnt.createLabel("knows", service.serviceName, "person", "integer", service.serviceName, "person", "integer",
+//    true, service.serviceName, Nil, Seq(Prop("weight", "0.0", "float")), "strong", None, None)
+//
 
   test("tinkerpop class graph test.") {
-    val marko = graph.addVertex(T.label, "person", T.id, Int.box(1))
-    marko.property("name", "marko")
-    marko.property("age", Int.box(29))
-    val vadas = graph.addVertex(T.label, "person", T.id, Int.box(2))
-    vadas.property("name", "vadas", "age", Int.box(27))
-    val lop = graph.addVertex(T.label, "software", T.id, Int.box(3), "name", "lop", "lang", "java")
-    val josh = graph.addVertex(T.label, "person", T.id, Int.box(4), "name", "josh", "age", Int.box(32))
-    val ripple = graph.addVertex(T.label, "software", T.id, Int.box(5), "name", "ripple", "lang", "java")
-    val peter = graph.addVertex(T.label, "person", T.id, Int.box(6), "name", "peter", "age", Int.box(35))
-
-    marko.addEdge("knows", vadas, T.id, Int.box(7), "weight", Float.box(0.5f))
-    marko.addEdge("knows", josh, T.id, Int.box(8), "weight", Float.box(1.0f))
-    marko.addEdge("created", lop, T.id, Int.box(9), "weight", Float.box(0.4f))
-    josh.addEdge("created", ripple, T.id, Int.box(10), "weight", Float.box(1.0f))
-    josh.addEdge("created", lop, T.id, Int.box(11), "weight", Float.box(0.4f))
-    peter.addEdge("created", lop, T.id, Int.box(12), "weight", Float.box(0.2f))
-    graph.tx().commit()
-
-    graph.traversal().V().inV()
-    val verticees = s2Graph.traversal().V().asAdmin().toSeq
-
-
-    val vs = verticees.toList
-    val edgeId = graph.traversal().V().has("name", "marko").outE("knows").as("e").inV().has("name", "vadas").select[Edge]("e").toList.head.id()
-    val edges = graph.traversal().E(edgeId).toList()
-//    .as("e").inV().has("name", "vadas").select[Edge]("e").asAdmin().toSeq
-//    graph.traversal.V.has("name", outVertexName).outE(edgeLabel).as("e").inV.has("name", inVertexName).select[Edge]("e").next.id
-    logger.error(edgeId.toString)
-    val x = edges.mkString("\n")
-    logger.error(x)
+//    val marko = graph.addVertex(T.label, "person", T.id, Int.box(1))
+//    marko.property("name", "marko")
+//    marko.property("age", Int.box(29))
+//    val vadas = graph.addVertex(T.label, "person", T.id, Int.box(2))
+//    vadas.property("name", "vadas", "age", Int.box(27))
+//    val lop = graph.addVertex(T.label, "software", T.id, Int.box(3), "name", "lop", "lang", "java")
+//    val josh = graph.addVertex(T.label, "person", T.id, Int.box(4), "name", "josh", "age", Int.box(32))
+//    val ripple = graph.addVertex(T.label, "software", T.id, Int.box(5), "name", "ripple", "lang", "java")
+//    val peter = graph.addVertex(T.label, "person", T.id, Int.box(6), "name", "peter", "age", Int.box(35))
+//
+//    marko.addEdge("knows", vadas, T.id, Int.box(7), "weight", Float.box(0.5f))
+//    marko.addEdge("knows", josh, T.id, Int.box(8), "weight", Float.box(1.0f))
+//    marko.addEdge("created", lop, T.id, Int.box(9), "weight", Float.box(0.4f))
+//    josh.addEdge("created", ripple, T.id, Int.box(10), "weight", Float.box(1.0f))
+//    josh.addEdge("created", lop, T.id, Int.box(11), "weight", Float.box(0.4f))
+//    peter.addEdge("created", lop, T.id, Int.box(12), "weight", Float.box(0.2f))
+//    graph.tx().commit()
+//
+//    graph.traversal().V().inV()
+//    val verticees = s2Graph.traversal().V().asAdmin().toSeq
+//
+//
+//    val vs = verticees.toList
+//    val edgeId = graph.traversal().V().has("name", "marko").outE("knows").as("e").inV().has("name", "vadas").select[Edge]("e").toList.head.id()
+//    val edges = graph.traversal().E(edgeId).toList()
+////    .as("e").inV().has("name", "vadas").select[Edge]("e").asAdmin().toSeq
+////    graph.traversal.V.has("name", outVertexName).outE(edgeLabel).as("e").inV.has("name", inVertexName).select[Edge]("e").next.id
+//    logger.error(edgeId.toString)
+//    val x = edges.mkString("\n")
+//    logger.error(x)
   }
 
   test("addVertex with empty parameter") {

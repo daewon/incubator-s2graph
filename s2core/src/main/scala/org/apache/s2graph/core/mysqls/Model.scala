@@ -140,6 +140,7 @@ object Model {
             throw new IllegalStateException(s"Failed to list models", e)
         }
       }
+      clearCache()
       ConnectionPool.closeAll()
     }
 
@@ -150,6 +151,15 @@ object Model {
     LabelMeta.findAll()
     LabelIndex.findAll()
     ColumnMeta.findAll()
+  }
+
+  def clearCache() = {
+    Service.expireAll()
+    ServiceColumn.expireAll()
+    Label.expireAll()
+    LabelMeta.expireAll()
+    LabelIndex.expireAll()
+    ColumnMeta.expireAll()
   }
 
   def extraOptions(options: Option[String]): Map[String, JsValue] = options match {
@@ -200,6 +210,11 @@ trait Model[V] extends SQLSyntaxSupport[V] {
   val expireCache = optionCache.invalidate _
 
   val expireCaches = listCache.invalidate _
+
+  def expireAll() = {
+    listCache.invalidateAll()
+    optionCache.invalidateAll()
+  }
 
   def putsToCache(kvs: List[(String, V)]) = kvs.foreach {
     case (key, value) => optionCache.put(key, Option(value))

@@ -51,7 +51,7 @@ case class S2Vertex(graph: S2Graph,
 
   def schemaVer = serviceColumn.schemaVersion
 
-  def serviceColumn = ServiceColumn.findById(id.colId, useCache = false)
+  def serviceColumn = ServiceColumn.findById(id.colId)
 
   def columnName = serviceColumn.columnName
 
