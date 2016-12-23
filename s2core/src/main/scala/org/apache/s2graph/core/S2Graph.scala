@@ -533,8 +533,9 @@ object S2Graph {
 @Graph.OptIn(Graph.OptIn.SUITE_STRUCTURE_STANDARD)
 @Graph.OptOuts(value = Array(
 // passed
-//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.FeatureSupportTest", method="*", reason="no"), // pass
+  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.FeatureSupportTest", method="*", reason="no"), // pass
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.PropertyTest", method="*", reason="no"), // pass
+
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexPropertyTest", method="*", reason="no"), // pass
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.VertexTest", method="*", reason="no"), // pss
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.EdgeTest", method="*", reason="no"), // pass
@@ -546,7 +547,7 @@ object S2Graph {
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedPropertyTest", method="*", reason="no"), // pass
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.detached.DetachedVertexPropertyTest", method="*", reason="no"), // pass
 
-  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"), // pass
+//  new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.GraphTest", method="*", reason="no"), // pass
 
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceEdgeTest", method="*", reason="no"), // pass
   new Graph.OptOut(test="org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceGraphTest", method="*", reason="no"), // pass
@@ -1482,9 +1483,20 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
       //TODO: default storage need to be fixed.
       Await.result(defaultStorage.fetchVerticesAll(), WaitTimeout).iterator
     } else {
-      val vertices = for {
-        vertexId <- vertexIds if vertexId.isInstanceOf[VertexId]
-      } yield newVertex(vertexId.asInstanceOf[VertexId])
+      val (vIds, stringIds) = vertexIds.partition(_.isInstanceOf[VertexId])
+      val verticesFromIds = vIds.map(vertexId => newVertex(vertexId.asInstanceOf[VertexId]))
+      val verticesFromString = stringIds.flatMap { vId =>
+        if (vId.toString.contains(S2Vertex.VertexLabelDelimiter)) {
+          val Array(serviceName, columnName, id) =
+            if (vId.toString.take(2).mkString("") == "v[") vId.toString.drop(2).init.split(S2Vertex.VertexLabelDelimiter)
+            else vId.toString.split(S2Vertex.VertexLabelDelimiter)
+
+          Seq(toVertex(serviceName, columnName, id))
+        } else {
+          Nil
+        }
+      }
+      val vertices = verticesFromIds ++ verticesFromString
 
       if (fetchVertices) {
         val future = getVertices(vertices).map { vs =>
@@ -1538,8 +1550,8 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
     }
     val kvsMap = S2Property.kvsToProps(kvs)
     val id = kvsMap.getOrElse(T.id.toString, Random.nextLong)
-    val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
 
+    val serviceColumnNames = kvsMap.getOrElse(T.label.toString, DefaultColumn.columnName).toString
 
     val names = serviceColumnNames.split(S2Vertex.VertexLabelDelimiter)
     val (serviceName, columnName) =

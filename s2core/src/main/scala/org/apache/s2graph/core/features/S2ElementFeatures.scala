@@ -17,7 +17,7 @@ abstract class S2ElementFeatures extends Features.ElementFeatures {
 
   override def supportsAnyIds(): Boolean = false
 
-  override def supportsNumericIds(): Boolean = true
+  override def supportsNumericIds(): Boolean = false
 
 //  override def willAllowId(id: scala.Any): Boolean = super.willAllowId(id)
 }

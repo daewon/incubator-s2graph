@@ -63,13 +63,20 @@ class S2GraphProvider extends AbstractGraphProvider {
 
   override def getImplementations: util.Set[Class[_]] = S2GraphProvider.Implementation.asJava
 
+  def initTestSchema(testClass: Class[_], testName: String) = {
+    val testClassName = testClass.getSimpleName
+    testClass.getSimpleName match {
+      case _ =>
+    }
+  }
+
   override def loadGraphData(graph: Graph, loadGraphWith: LoadGraphWith, testClass: Class[_], testName: String): Unit = {
     val s2Graph = graph.asInstanceOf[S2Graph]
     val mnt = s2Graph.getManagement()
     val defaultService = s2Graph.DefaultService
     val defaultServiceColumn = s2Graph.DefaultColumn
 
-    logger.info(s"LoadGraphData => testClass: $testClass TestName: $testName")
+    initTestSchema(testClass, testName)
 
     Management.deleteLabel("knows")
 

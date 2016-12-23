@@ -12,7 +12,7 @@ class S2VertexPropertyFeatures extends S2PropertyFeatures with Features.VertexPr
 
   override def willAllowId(id: scala.Any): Boolean = true
 
-  override def supportsNumericIds(): Boolean = true
+  override def supportsNumericIds(): Boolean = false
 
   override def supportsRemoveProperty(): Boolean = true
 
