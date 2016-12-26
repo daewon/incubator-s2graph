@@ -1489,7 +1489,13 @@ class S2Graph(_config: Config)(implicit val ec: ExecutionContext) extends Graph 
         if (vId.toString.contains(S2Vertex.VertexLabelDelimiter)) {
           val Array(serviceName, columnName, id) =
             if (vId.toString.take(2).mkString("") == "v[") vId.toString.drop(2).init.split(S2Vertex.VertexLabelDelimiter)
-            else vId.toString.split(S2Vertex.VertexLabelDelimiter)
+            else {
+              if (vId.toString.contains(S2Vertex.VertexLabelDelimiter)) {
+                vId.toString.split(S2Vertex.VertexLabelDelimiter)
+              } else {
+                Array(DefaultService.serviceName, DefaultColumn.columnName, vId.toString)
+              }
+            }
 
           Seq(toVertex(serviceName, columnName, id))
         } else {
