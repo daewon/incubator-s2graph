@@ -25,12 +25,11 @@ addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.5.9")
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.7.0")
 
 // sbt revolver
-addSbtPlugin("io.spray" % "sbt-revolver" % "0.8.0")
+addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.0.3")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.0")
-
 
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.0.0")
 
