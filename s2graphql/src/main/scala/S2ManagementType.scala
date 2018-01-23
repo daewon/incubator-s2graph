@@ -38,7 +38,8 @@ object S2ManagementType {
 
   val ServiceType = deriveObjectType[GraphRepository, Service](
     ObjectTypeName("Service"),
-    ObjectTypeDescription("Service")
+    ObjectTypeDescription("Service"),
+    RenameField("serviceName", "name")
   )
 
   val LabelMetaType = deriveObjectType[GraphRepository, LabelMeta](
@@ -112,7 +113,8 @@ object S2ManagementType {
     AddFields(
       Field("Indexes", ListType(LabelIndexType), resolve = c => Nil),
       Field("Props", ListType(LabelMetaType), resolve = c => Nil)
-    )
+    ),
+    RenameField("label", "name")
   )
 
   val NameArg = Argument("name", StringType)

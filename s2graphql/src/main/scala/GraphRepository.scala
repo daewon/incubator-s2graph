@@ -11,6 +11,7 @@ import sangria.schema.{Action, Args}
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success}
 
 case class PartialVertex(id: String)
 
@@ -70,14 +71,19 @@ class GraphRepository(val graph: S2Graph) {
       compressionAlgorithm,
       options)
 
-    labelTry.toOption
+    labelTry match {
+      case Success(label) => Option(label)
+      case Failure(ex) =>
+        println(ex)
+        None
+    }
   }
 
   def allServices: List[Service] = Service.findAll()
 
   def findServiceByName(name: String): Option[Service] = Service.findByName(name)
 
-  val allLabels: List[Label] = Label.findAll()
+  def allLabels: List[Label] = Label.findAll()
 
   def findLabelByName(name: String): Option[Label] = Label.findByName(name)
 }
