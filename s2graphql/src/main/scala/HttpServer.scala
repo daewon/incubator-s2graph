@@ -1,3 +1,5 @@
+package org.apache.s2graph
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer

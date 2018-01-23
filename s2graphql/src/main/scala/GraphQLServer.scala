@@ -1,3 +1,5 @@
+package org.apache.s2graph
+
 import java.util.concurrent.Executors
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -10,6 +12,7 @@ import sangria.ast.Document
 import sangria.execution._
 import sangria.marshalling.sprayJson._
 import sangria.parser.QueryParser
+import sangria.renderer.SchemaRenderer
 import spray.json.{JsObject, JsString, JsValue}
 
 import scala.concurrent.ExecutionContext
@@ -49,6 +52,11 @@ object GraphQLServer {
   }
 
   private def executeGraphQLQuery(query: Document, op: Option[String], vars: JsObject)(implicit e: ExecutionContext) = {
+
+    println("-" * 80)
+//    println(SchemaRenderer.renderSchema(SchemaDef.S2GraphSchema))
+    println("-" * 80)
+
     Executor.execute(
       SchemaDef.S2GraphSchema,
       query,

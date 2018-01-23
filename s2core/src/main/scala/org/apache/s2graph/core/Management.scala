@@ -63,7 +63,7 @@ object Management {
 
   object JsonModel {
 
-    case class Prop(name: String, defaultValue: String, datatType: String)
+    case class Prop(name: String, defaultValue: String, dataType: String)
 
     object Prop extends ((String, String, String) => Prop)
 
@@ -165,7 +165,7 @@ object Management {
       val labelOpt = Label.findByName(labelStr)
       val label = labelOpt.getOrElse(throw LabelNotExistException(s"$labelStr not found"))
 
-      LabelMeta.findOrInsert(label.id.get, prop.name, prop.defaultValue, prop.datatType)
+      LabelMeta.findOrInsert(label.id.get, prop.name, prop.defaultValue, prop.dataType)
     }
   }
 
