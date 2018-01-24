@@ -1,9 +1,12 @@
 package org.apache.s2graph
 
+import org.apache.s2graph.SchemaDef.MutationResponse
 import org.apache.s2graph.core.Management.JsonModel.{Index, Prop}
 import org.apache.s2graph.core.mysqls._
 import sangria.marshalling.{CoercedScalaResultMarshaller, FromInput}
 import sangria.schema._
+
+import scala.util.{Failure, Success, Try}
 
 object S2ManagementType {
 
@@ -76,20 +79,30 @@ object S2ManagementType {
     )
   )
 
+  val dummyEnum = EnumValue("_", value = "_")
   case class LabelServiceProp(name: String, columnName: String, dataType: String)
 
   def S2EnumServiceType = EnumType(
-    "ServiceList",
-    values = Service.findAll().map { service =>
-      EnumValue(service.serviceName, value = service.serviceName)
-    }
+    s"ServiceList",
+    values =
+      dummyEnum +: Service.findAll().map { service =>
+        EnumValue(service.serviceName, value = service.serviceName)
+      }
+  )
+
+  def S2EnumCompressionAlgorithmType = EnumType(
+    "compressionAlgorithm",
+    values = List(
+      EnumValue("gz", description = Option("gzip"), value = "gz"),
+      EnumValue("lz4", description = Option("lz4"), value = "lz4")
+    )
   )
 
   def S2EnumConsistencyLevelType = EnumType(
     "consistencyList",
     values = List(
-      EnumValue("weak", description = Option(".."), value = "weak"),
-      EnumValue("strong", description = Option(".."), value = "strong")
+      EnumValue("weak", description = Option("weak consistency"), value = "weak"),
+      EnumValue("strong", description = Option("strong consistency"), value = "strong")
     )
   )
 
@@ -107,7 +120,8 @@ object S2ManagementType {
     ExcludeFields("seq", "metaSeqs", "formulars", "labelId")
   )
 
-  val LabelType = deriveObjectType[GraphRepository, Label](
+
+  lazy val LabelType = deriveObjectType[GraphRepository, Label](
     ObjectTypeName("Label"),
     ObjectTypeDescription("Label"),
     AddFields(
@@ -122,7 +136,7 @@ object S2ManagementType {
   val IndicesArg = Argument("indices", OptionInputType(ListInputType(InputIndexType)))
 
   val serviceArgOpts = List(
-    "compressionAlgorithm" -> StringType,
+    "compressionAlgorithm" -> S2EnumCompressionAlgorithmType,
     "cluster" -> StringType,
     "hTableName" -> StringType,
     "preSplitSize" -> IntType,
@@ -134,7 +148,7 @@ object S2ManagementType {
     "targetService" -> InputLabelServiceType
   ).map { case (name, _type) => Argument(name, _type) }
 
-  val labelArgOpts = List(
+  def labelArgOpts = List(
     "serviceName" -> S2EnumServiceType,
     "consistencyLevel" -> S2EnumConsistencyLevelType,
     "isDirected" -> BooleanType,
@@ -142,5 +156,37 @@ object S2ManagementType {
     "schemaVersion" -> StringType
   ).map { case (name, _type) => Argument(name, OptionInputType(_type)) }
 
+  def createMutationResponseType[T](name: String, desc: String, tpe: ObjectType[_, T]) = {
+    ObjectType(name, desc,
+      () => fields[Unit, MutationResponse[T]](
+        Field("isSuccess",
+          BooleanType,
+          resolve = _.value.result.isSuccess
+        ),
+        Field("message",
+          OptionType(StringType),
+          resolve = _.value.result match {
+            case Success(_) => None
+            case Failure(ex) => Option(ex.getMessage)
+          }
+        ),
+        Field(name,
+          OptionType(tpe),
+          resolve = _.value.result.toOption
+        )
+      )
+    )
+  }
 
+  lazy val ServiceMutationResponseType = createMutationResponseType[Service](
+    "CreatedService",
+    "desc here",
+    ServiceType
+  )
+
+  lazy val LabelMutationResponseType = createMutationResponseType[Label](
+    "CreatedLabel",
+    "desc here",
+    LabelType
+  )
 }

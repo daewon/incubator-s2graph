@@ -11,29 +11,38 @@ import sangria.schema.{Action, Args}
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 case class PartialVertex(id: String)
 
 class GraphRepository(val graph: S2Graph) {
   val management = graph.management
-  val rq = new RequestParser(graph)
+  val parser = new RequestParser(graph)
 
-  def createService(args: Args): Option[Service] = {
-    val serviceName = args.arg[String]("name")
-    val cluster = args.argOpt[String]("cluster").getOrElse(rq.DefaultCluster)
-    val hTableName = args.argOpt[String]("hTableName").getOrElse(s"${serviceName}-${rq.DefaultPhase}")
-    val preSplitSize = args.argOpt[Int]("preSplitSize").getOrElse(1)
-    val hTableTTL = args.argOpt[Int]("hTableTTL")
-    val compressionAlgorithm = args.argOpt[String]("compressionAlgorithm").getOrElse(rq.DefaultCompressionAlgorithm)
-
-    val serviceTry = management
-      .createService(serviceName, cluster, hTableName, preSplitSize, hTableTTL, compressionAlgorithm)
-
-    serviceTry.toOption
+  def insertEdge(args: Args): Future[Boolean] = {
+    Future.successful(true)
   }
 
-  def createLabel(args: Args): Option[Label] = {
+  def createService(args: Args): Try[Service] = {
+    val serviceName = args.arg[String]("name")
+
+    Service.findByName(serviceName) match {
+      case Some(_) => Failure(new RuntimeException(s"Service (${serviceName}) already exists"))
+      case None =>
+        val cluster = args.argOpt[String]("cluster").getOrElse(parser.DefaultCluster)
+        val hTableName = args.argOpt[String]("hTableName").getOrElse(s"${serviceName}-${parser.DefaultPhase}")
+        val preSplitSize = args.argOpt[Int]("preSplitSize").getOrElse(1)
+        val hTableTTL = args.argOpt[Int]("hTableTTL")
+        val compressionAlgorithm = args.argOpt[String]("compressionAlgorithm").getOrElse(parser.DefaultCompressionAlgorithm)
+
+        val serviceTry = management
+          .createService(serviceName, cluster, hTableName, preSplitSize, hTableTTL, compressionAlgorithm)
+
+        serviceTry
+    }
+  }
+
+  def createLabel(args: Args): Try[Label] = {
     val labelName = args.arg[String]("name")
 
     val srcServiceProp = args.arg[LabelServiceProp]("sourceService")
@@ -49,11 +58,9 @@ class GraphRepository(val graph: S2Graph) {
     val hTableTTL = args.argOpt[Int]("hTableTTL")
     val schemaVersion = args.argOpt[String]("schemaVersion").getOrElse(HBaseType.DEFAULT_VERSION)
     val isAsync = args.argOpt("isAsync").getOrElse(false)
-    val compressionAlgorithm = args.argOpt[String]("compressionAlgorithm").getOrElse(rq.DefaultCompressionAlgorithm)
+    val compressionAlgorithm = args.argOpt[String]("compressionAlgorithm").getOrElse(parser.DefaultCompressionAlgorithm)
     val isDirected = args.argOpt[Boolean]("isDirected").getOrElse(true)
-
-    // TODO: OptionType
-    val options = args.argOpt[String]("options")
+    val options = args.argOpt[String]("options") // TODO: support option type
 
     val labelTry: scala.util.Try[Label] = management.createLabel(
       labelName,
@@ -77,6 +84,8 @@ class GraphRepository(val graph: S2Graph) {
         println(ex)
         None
     }
+
+    labelTry
   }
 
   def allServices: List[Service] = Service.findAll()

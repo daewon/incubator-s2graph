@@ -1,6 +1,9 @@
 package org.apache.s2graph
 
+import org.apache.s2graph.core.mysqls.Label
 import sangria.renderer.SchemaRenderer
+
+import scala.util.Try
 
 object SchemaDef {
 
@@ -36,19 +39,20 @@ object SchemaDef {
     )
   )
 
+  case class MutationResponse[T](result: Try[T])
+
   def S2MutationType = ObjectType("Mutation", fields[GraphRepository, Unit](
     Field("createService",
-      OptionType(ServiceType),
+      ServiceMutationResponseType,
       arguments = NameArg :: serviceArgOpts,
-      resolve = c => c.ctx.createService(c.args)
+      resolve = c => MutationResponse(c.ctx.createService(c.args))
     ),
     Field("createLabel",
-      OptionType(LabelType),
-      arguments =
-        NameArg :: PropArg :: IndicesArg :: labelArgRequired ::: labelArgOpts,
-      resolve = c => c.ctx.createLabel(c.args)
+      LabelMutationResponseType,
+      arguments = NameArg :: PropArg :: IndicesArg :: labelArgRequired ::: labelArgOpts,
+      resolve = c => MutationResponse(c.ctx.createLabel(c.args))
     )
   ))
 
-  def S2GraphSchema = Schema(S2QueryType, Option(S2MutationType))
+  def S2GraphSchema() = Schema(S2QueryType, Option(S2MutationType))
 }

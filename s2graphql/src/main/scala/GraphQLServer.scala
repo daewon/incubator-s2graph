@@ -54,7 +54,7 @@ object GraphQLServer {
   private def executeGraphQLQuery(query: Document, op: Option[String], vars: JsObject)(implicit e: ExecutionContext) = {
 
     println("-" * 80)
-//    println(SchemaRenderer.renderSchema(SchemaDef.S2GraphSchema))
+    println(SchemaRenderer.renderSchema(SchemaDef.S2GraphSchema))
     println("-" * 80)
 
     Executor.execute(
