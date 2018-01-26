@@ -8,11 +8,13 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import com.typesafe.config.ConfigFactory
 import org.apache.s2graph.core.S2Graph
+import org.apache.s2graph.core.utils.SafeUpdateCache
 import sangria.ast.Document
 import sangria.execution._
 import sangria.marshalling.sprayJson._
 import sangria.parser.QueryParser
 import sangria.renderer.SchemaRenderer
+import sangria.schema.Schema
 import spray.json.{JsObject, JsString, JsValue}
 
 import scala.concurrent.ExecutionContext
@@ -24,11 +26,16 @@ object GraphQLServer {
   val numOfThread = Runtime.getRuntime.availableProcessors()
   val threadPool = Executors.newFixedThreadPool(numOfThread * 2)
 
-  val ec = ExecutionContext.fromExecutor(threadPool)
-  val config = ConfigFactory.load()
+  implicit val ec = ExecutionContext.fromExecutor(threadPool)
 
-  val s2graph = new S2Graph(config)(ec)
+  val config = ConfigFactory.load()
+  val s2graph = new S2Graph(config)
+  val schemaCacheTTL = Try(config.getInt("schemaCacheTTL")).getOrElse(-1)
   val s2Repository = new GraphRepository(s2graph)
+  val schemaCache = new SafeUpdateCache[Schema[GraphRepository, Unit]]("schema", maxSize = 1, ttl = schemaCacheTTL)
+
+  // in develpment mode: make schema every request
+  println(s"schemaCacheTTL: ${schemaCacheTTL}")
 
   def endpoint(requestJSON: spray.json.JsValue)(implicit e: ExecutionContext): Route = {
 
@@ -52,13 +59,21 @@ object GraphQLServer {
   }
 
   private def executeGraphQLQuery(query: Document, op: Option[String], vars: JsObject)(implicit e: ExecutionContext) = {
+    val s2schema = schemaCache.withCache("s2Schema") {
+      println("Schema Updated:")
 
-    println("-" * 80)
-    println(SchemaRenderer.renderSchema(SchemaDef.S2GraphSchema))
-    println("-" * 80)
+      val newSchema = new SchemaDef().S2GraphSchema
+
+      println(SchemaRenderer.renderSchema(newSchema))
+      println("-" * 80)
+
+      newSchema
+    }
+
+    println(s"ts: ${System.currentTimeMillis()}, op: ${op}")
 
     Executor.execute(
-      SchemaDef.S2GraphSchema,
+      s2schema,
       query,
       s2Repository,
       variables = vars,

@@ -2,13 +2,53 @@ package org.apache.s2graph
 
 import org.apache.s2graph.SchemaDef.MutationResponse
 import org.apache.s2graph.core.Management.JsonModel.{Index, Prop}
+import org.apache.s2graph.core.S2EdgeLike
 import org.apache.s2graph.core.mysqls._
+import org.apache.s2graph.core.storage.MutateResponse
+import play.api.libs.json.JsValue
 import sangria.marshalling.{CoercedScalaResultMarshaller, FromInput}
 import sangria.schema._
 
 import scala.util.{Failure, Success, Try}
 
 object S2ManagementType {
+
+  import SangriaPlayJsonInputSerializer._
+
+  case class PartialEdgeParam(ts: Long,
+                              from: Any,
+                              to: Any,
+                              direction: String,
+                              props: Map[String, Any])
+
+  implicit object PartialEdgeFromInput extends FromInput[PartialEdgeParam] {
+    val marshaller = CoercedScalaResultMarshaller.default
+
+    def fromResult(node: marshaller.Node) = {
+      val inputMap = node.asInstanceOf[Map[String, Any]]
+      println(inputMap)
+
+      val from = inputMap("from")
+      val to = inputMap("to")
+
+      val ts = inputMap.get("timestamp") match {
+        case Some(Some(v)) => v.asInstanceOf[Long]
+        case _ => System.currentTimeMillis()
+      }
+
+      val dir = inputMap.get("direction") match {
+        case Some(Some(v)) => v.asInstanceOf[String]
+        case None => "out"
+      }
+
+      val props = inputMap.get("props") match {
+        case Some(Some(v)) => v.asInstanceOf[Map[String, Option[Any]]].filter(_._2.isDefined).mapValues(_.get)
+        case _ => Map.empty[String, Any]
+      }
+
+      PartialEdgeParam(ts, from, to, dir, props)
+    }
+  }
 
   implicit object IndexFromInput extends FromInput[Index] {
     val marshaller = CoercedScalaResultMarshaller.default
@@ -38,6 +78,7 @@ object S2ManagementType {
   }
 
   import sangria.macros.derive._
+  import SangriaPlayJsonInputSerializer._
 
   val ServiceType = deriveObjectType[GraphRepository, Service](
     ObjectTypeName("Service"),
@@ -50,7 +91,7 @@ object S2ManagementType {
     ExcludeFields("seq", "labelId")
   )
 
-  val S2EnumDataType = EnumType(
+  def S2EnumDataType = EnumType(
     "S2DataType",
     values = List(
       EnumValue("string", value = "string"),
@@ -60,7 +101,15 @@ object S2ManagementType {
     )
   )
 
-  val InputIndexType = InputObjectType[Index](
+  def S2EnumDirectionType = EnumType(
+    "S2Direction",
+    values = List(
+      EnumValue("out", value = "out"),
+      EnumValue("in", value = "in")
+    )
+  )
+
+  def InputIndexType = InputObjectType[Index](
     "Index",
     description = "description here",
     fields = List(
@@ -69,7 +118,28 @@ object S2ManagementType {
     )
   )
 
-  val InputPropType = InputObjectType[Prop](
+
+  //  lazy val InputPropsListType = InputObjectType[Map[String, JsValue]](
+  //    "InputPropType",
+  //    "desc",
+  //    () => LabelMeta.findAll().map(_.name).distinct.map { name =>
+  //      InputField(name, PlayJsonType)
+  //    }
+  //  )
+  //  lazy val InputEdgeType = InputObjectType[PartialEdge](
+  //    "Edge",
+  //    description = "edge",
+  //    fields = List(
+  //      InputField("timestamp", LongType),
+  //      InputField("from", PlayJsonType),
+  //      InputField("to", PlayJsonType),
+  //      InputField("label", S2EnumLabelType),
+  //      InputField("direction", OptionInputType(S2EnumDirectionType)),
+  //      InputField("props", OptionInputType(InputPropsListType))
+  //    )
+  //  )
+
+  def InputPropType = InputObjectType[Prop](
     "Prop",
     description = "A Property of Label",
     fields = List(
@@ -80,6 +150,7 @@ object S2ManagementType {
   )
 
   val dummyEnum = EnumValue("_", value = "_")
+
   case class LabelServiceProp(name: String, columnName: String, dataType: String)
 
   def S2EnumServiceType = EnumType(
@@ -87,6 +158,14 @@ object S2ManagementType {
     values =
       dummyEnum +: Service.findAll().map { service =>
         EnumValue(service.serviceName, value = service.serviceName)
+      }
+  )
+
+  def S2EnumLabelType = EnumType(
+    s"LabelList",
+    values =
+      dummyEnum +: Label.findAll().map { label =>
+        EnumValue(label.label, value = label.label)
       }
   )
 
@@ -115,27 +194,83 @@ object S2ManagementType {
     )
   )
 
-  val LabelIndexType = deriveObjectType[GraphRepository, LabelIndex](
+  def LabelIndexType = deriveObjectType[GraphRepository, LabelIndex](
     ObjectTypeName("LabelIndex"),
     ExcludeFields("seq", "metaSeqs", "formulars", "labelId")
   )
 
-
-  lazy val LabelType = deriveObjectType[GraphRepository, Label](
+  def LabelType = deriveObjectType[GraphRepository, Label](
     ObjectTypeName("Label"),
     ObjectTypeDescription("Label"),
     AddFields(
-      Field("Indexes", ListType(LabelIndexType), resolve = c => Nil),
-      Field("Props", ListType(LabelMetaType), resolve = c => Nil)
+      Field("indexes", ListType(LabelIndexType), resolve = c => Nil),
+      Field("props", ListType(LabelMetaType), resolve = c => Nil)
     ),
     RenameField("label", "name")
   )
 
-  val NameArg = Argument("name", StringType)
-  val PropArg = Argument("props", OptionInputType(ListInputType(InputPropType)))
-  val IndicesArg = Argument("indices", OptionInputType(ListInputType(InputIndexType)))
+  def s2TypeToScalarType(from: String): ScalarType[_] = {
+    from match {
+      case "string" => StringType
+      case "int" => IntType
+      case "integer" => IntType
+      case "long" => LongType
+      case "float" => FloatType
+      case "boolean" => BooleanType
+      case "bool" => BooleanType
+    }
+  }
 
-  val serviceArgOpts = List(
+  def NameArg = Argument("name", StringType, description = "desc here")
+
+  def ServiceNameArg = Argument("name", OptionInputType(S2EnumServiceType), description = "desc here")
+
+  def LabelNameArg = Argument("name", OptionInputType(S2EnumLabelType), description = "desc here")
+
+  def PropArg = Argument("props", OptionInputType(ListInputType(InputPropType)), description = "desc here")
+
+  def IndicesArg = Argument("indices", OptionInputType(ListInputType(InputIndexType)), description = "desc here")
+
+  def makeInputPartialEdgeParamType(label: Label): InputObjectType[PartialEdgeParam] = {
+    lazy val InputPropsType = InputObjectType[Map[String, ScalarType[_]]](
+      s"${label.label}_props",
+      description = "desc here",
+      () => label.labelMetaSet.toList.map(lm =>
+        InputField(lm.name, OptionInputType(s2TypeToScalarType(lm.dataType)))
+      )
+    )
+
+    lazy val labelFields = List(
+      InputField("timestamp", OptionInputType(LongType)),
+      InputField("from", s2TypeToScalarType(label.srcColumnType)),
+      InputField("to", s2TypeToScalarType(label.srcColumnType)),
+      InputField("direction", OptionInputType(S2EnumDirectionType))
+    )
+
+    InputObjectType[PartialEdgeParam](
+      label.label,
+      description = "desc here",
+      () => {
+        if (label.labelMetaSet.isEmpty) {
+          labelFields
+        } else {
+          labelFields ++ Seq(InputField("props", OptionInputType(InputPropsType)))
+        }
+      }
+    )
+  }
+
+  def EdgeArg = Label.findAll().map { label =>
+    val inputPartialEdgeParamType = makeInputPartialEdgeParamType(label)
+    Argument(label.label, OptionInputType(inputPartialEdgeParamType))
+  }
+
+  def EdgesArg = Label.findAll().map { label =>
+    val inputPartialEdgeParamType = makeInputPartialEdgeParamType(label)
+    Argument(label.label, OptionInputType(ListInputType(inputPartialEdgeParamType)))
+  }
+
+  def serviceArgOpts = List(
     "compressionAlgorithm" -> S2EnumCompressionAlgorithmType,
     "cluster" -> StringType,
     "hTableName" -> StringType,
@@ -156,6 +291,26 @@ object S2ManagementType {
     "schemaVersion" -> StringType
   ).map { case (name, _type) => Argument(name, OptionInputType(_type)) }
 
+  def ServiceMutationResponseType = createMutationResponseType[Service](
+    "CreateService",
+    "desc here",
+    ServiceType
+  )
+
+  def LabelMutationResponseType = createMutationResponseType[Label](
+    "CreateLabel",
+    "desc here",
+    LabelType
+  )
+
+  // TODO: Change to EdgeType
+  case class BooleanResponse(isSuccess: Boolean)
+
+  def EdgeMutateResponseType = deriveObjectType[GraphRepository, BooleanResponse](
+    ObjectTypeName("EdgeMutateResponse"),
+    ObjectTypeDescription("desc here")
+  )
+
   def createMutationResponseType[T](name: String, desc: String, tpe: ObjectType[_, T]) = {
     ObjectType(name, desc,
       () => fields[Unit, MutationResponse[T]](
@@ -170,23 +325,11 @@ object S2ManagementType {
             case Failure(ex) => Option(ex.getMessage)
           }
         ),
-        Field(name,
+        Field("created",
           OptionType(tpe),
           resolve = _.value.result.toOption
         )
       )
     )
   }
-
-  lazy val ServiceMutationResponseType = createMutationResponseType[Service](
-    "CreatedService",
-    "desc here",
-    ServiceType
-  )
-
-  lazy val LabelMutationResponseType = createMutationResponseType[Label](
-    "CreatedLabel",
-    "desc here",
-    LabelType
-  )
 }

@@ -183,6 +183,8 @@ object LabelMeta extends Model[LabelMeta] {
       val cacheKey = s"labelId=${labelId}"
       cacheKey -> ls
     }.toList)
+
+    ls
   }
 }
 

@@ -13,12 +13,11 @@ object SangriaPlayJsonInputSerializer {
   import sangria.marshalling.{InputUnmarshaller, ScalarValueInfo, ArrayMapBuilder, ResultMarshaller}
   import sangria.schema._
   import sangria.validation.{ValueCoercionViolation, IntCoercionViolation, BigIntCoercionViolation}
-  //  import spray.json._
   import play.api.libs.json._
   import sangria.macros._
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit object CustomSprayJsonResultMarshaller extends ResultMarshaller {
+  implicit object SangriaPlayJsonResultMarshaller extends ResultMarshaller {
     type Node = JsValue
     type MapBuilder = ArrayMapBuilder[Node]
 
@@ -30,7 +29,7 @@ object SangriaPlayJsonInputSerializer {
 
     def mapNode(keyValues: Seq[(String, JsValue)]) = JsObject(keyValues.toMap)
 
-    def arrayNode(values: Vector[JsValue]) = JsArray(values.toVector)
+    def arrayNode(values: Vector[JsValue]) = JsArray(values)
 
     def optionalArrayNodeValue(value: Option[JsValue]) = value match {
       case Some(v) ⇒ v
@@ -59,7 +58,7 @@ object SangriaPlayJsonInputSerializer {
     def renderPretty(node: JsValue) = Json.prettyPrint(node)
   }
 
-  implicit object SprayJsonInputUnmarshaller extends InputUnmarshaller[JsValue] {
+  implicit object PlayJsonInputUnmarshaller extends InputUnmarshaller[JsValue] {
     def getRootMapValue(node: JsValue, key: String) = node.asInstanceOf[JsObject].value.get(key)
 
     def isListNode(node: JsValue) = node.isInstanceOf[JsArray]
@@ -96,8 +95,21 @@ object SangriaPlayJsonInputSerializer {
 
   case object JsonCoercionViolation extends ValueCoercionViolation("Not valid JSON")
 
-  implicit val JsonType = ScalarType[JsValue]("Json",
-    description = Some("Raw JSON value"),
+  def scalarTypeToJsValue(v: sangria.ast.Value): JsValue = v match {
+    case v: IntValue => JsNumber(v.value)
+    case v: BigIntValue => JsNumber(BigDecimal(v.value.bigInteger))
+    case v: FloatValue => JsNumber(v.value)
+    case v: BigDecimalValue => JsNumber(v.value)
+    case v: StringValue => JsString(v.value)
+    case v: BooleanValue => JsBoolean(v.value)
+    case v: ListValue => JsNull
+    case v: VariableValue => JsNull
+    case v: NullValue => JsNull
+    case v: ObjectValue => JsNull
+  }
+
+  implicit val PlayJsonType = ScalarType[JsValue]("PlayJson",
+    description = Some("Raw Json value"),
     coerceOutput = (value, _) ⇒ value,
     coerceUserInput = {
       case v: String => Right(JsString(v))
@@ -111,7 +123,14 @@ object SangriaPlayJsonInputSerializer {
       case v: JsValue => Right(v)
     },
     coerceInput = {
-      case value: ast.StringValue => Right(Json.parse(value.value))
+      case value: ast.StringValue => Right(JsString(value.value))
+      case value: ast.IntValue => Right(JsNumber(value.value))
+      case value: ast.FloatValue => Right(JsNumber(value.value))
+      case value: ast.BigIntValue => Right(JsNumber(BigDecimal(value.value.bigInteger)))
+      case value: ast.ObjectValue => {
+        val kvs = value.fieldsByName.map { case (key, value) => key -> scalarTypeToJsValue(value) }
+        Right(JsObject(kvs.toSeq))
+      }
       case _ => Left(JsonCoercionViolation)
     })
 }
