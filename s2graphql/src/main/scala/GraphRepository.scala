@@ -1,16 +1,12 @@
 package org.apache.s2graph
 
-import org.apache.s2graph.S2ManagementType.{
-  BooleanResponse,
-  LabelServiceProp,
-  PartialEdgeParam
-}
+import org.apache.s2graph.S2ManagementType.{BooleanResponse, LabelServiceProp, PartialEdgeParam, PartialVertexParam}
 import org.apache.s2graph.core.Management.JsonModel.{Index, Prop}
-import org.apache.s2graph.core.{S2EdgeLike, S2Graph, S2GraphLike}
-import org.apache.s2graph.core.mysqls.{Label, LabelIndex, Service}
+import org.apache.s2graph.core._
+import org.apache.s2graph.core.mysqls.{Label, LabelIndex, Service, ServiceColumn}
 import org.apache.s2graph.core.rest.RequestParser
 import org.apache.s2graph.core.storage.MutateResponse
-import org.apache.s2graph.core.types.HBaseType
+import org.apache.s2graph.core.types.{HBaseType, LabelWithDirection}
 import play.api.libs.json._
 import sangria.schema.{Action, Args}
 
@@ -21,6 +17,11 @@ class GraphRepository(graph: S2GraphLike) {
   val management = graph.management
   val parser = new RequestParser(graph)
   implicit val ec = graph.ec
+
+  def partialVertexParamToVertex(column: ServiceColumn, param: PartialVertexParam): S2VertexLike = {
+    val id = JSONParser.jsValueToInnerVal(param.vid, column.columnType, column.schemaVersion).get
+    graph.toVertex(param.service.serviceName, column.columnName, id)
+  }
 
   def partialEdgeParamToS2Edge(labelName: String,
                                param: PartialEdgeParam): S2EdgeLike = {
@@ -51,13 +52,20 @@ class GraphRepository(graph: S2GraphLike) {
     graph.mutateEdges(edges).map(a => a.map(b => BooleanResponse(b.isSuccess))).map(_.headOption)
   }
 
+  def getEdges(vertex: S2VertexLike, label: Label, _dir: String): Future[Seq[S2EdgeLike]] = {
+    val dir = GraphUtil.directions(_dir)
+    val labelWithDir = LabelWithDirection(label.id.get, dir)
+    val step = Step(Seq(QueryParam(labelWithDir)))
+    val q = Query(Seq(vertex), steps = Vector(step))
+
+    graph.getEdges(q).map(_.edgeWithScores.map(_.edge))
+  }
+
   def createService(args: Args): Try[Service] = {
     val serviceName = args.arg[String]("name")
 
     Service.findByName(serviceName) match {
-      case Some(_) =>
-        Failure(
-          new RuntimeException(s"Service (${serviceName}) already exists"))
+      case Some(_) => Failure(new RuntimeException(s"Service (${serviceName}) already exists"))
       case None =>
         val cluster =
           args.argOpt[String]("cluster").getOrElse(parser.DefaultCluster)
@@ -90,7 +98,6 @@ class GraphRepository(graph: S2GraphLike) {
 
     val allProps = args.argOpt[Vector[Prop]]("props").getOrElse(Vector.empty)
     val indices = args.argOpt[Vector[Index]]("indices").getOrElse(Vector.empty)
-    println(indices)
 
     val serviceName =
       args.argOpt[String]("serviceName").getOrElse(tgtServiceProp.name)

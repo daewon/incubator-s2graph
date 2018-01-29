@@ -13,7 +13,9 @@ import scala.util.{Failure, Success, Try}
 
 object S2ManagementType {
 
-  import SangriaPlayJsonInputSerializer._
+  import PlayJsonPolyType._
+
+  case class PartialVertexParam(service: Service, vid: JsValue)
 
   case class PartialEdgeParam(ts: Long,
                               from: Any,
@@ -78,7 +80,7 @@ object S2ManagementType {
   }
 
   import sangria.macros.derive._
-  import SangriaPlayJsonInputSerializer._
+  import PlayJsonPolyType._
 
   val ServiceType = deriveObjectType[GraphRepository, Service](
     ObjectTypeName("Service"),
@@ -248,7 +250,7 @@ object S2ManagementType {
     )
 
     InputObjectType[PartialEdgeParam](
-      label.label,
+      s"${label.label}_mutate",
       description = "desc here",
       () => {
         if (label.labelMetaSet.isEmpty) {
@@ -332,4 +334,6 @@ object S2ManagementType {
       )
     )
   }
+
+
 }

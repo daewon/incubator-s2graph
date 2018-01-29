@@ -32,7 +32,7 @@ object GraphQLServer {
   val s2graph = new S2Graph(config)
   val schemaCacheTTL = Try(config.getInt("schemaCacheTTL")).getOrElse(-1)
   val s2Repository = new GraphRepository(s2graph)
-  val schemaCache = new SafeUpdateCache[Schema[GraphRepository, Unit]]("schema", maxSize = 1, ttl = schemaCacheTTL)
+  val schemaCache = new SafeUpdateCache[Schema[GraphRepository, Any]]("schema", maxSize = 1, ttl = schemaCacheTTL)
 
   // in develpment mode: make schema every request
   println(s"schemaCacheTTL: ${schemaCacheTTL}")
@@ -62,7 +62,7 @@ object GraphQLServer {
     val s2schema = schemaCache.withCache("s2Schema") {
       println("Schema Updated:")
 
-      val newSchema = new SchemaDef().S2GraphSchema
+      val newSchema = new SchemaDef(s2Repository).S2GraphSchema
 
       println(SchemaRenderer.renderSchema(newSchema))
       println("-" * 80)
