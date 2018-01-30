@@ -1,6 +1,6 @@
 package org.apache.s2graph
 
-import org.apache.s2graph.S2ManagementType.{BooleanResponse, LabelServiceProp, PartialEdgeParam, PartialVertexParam}
+import org.apache.s2graph.S2Type._
 import org.apache.s2graph.core.Management.JsonModel.{Index, Prop}
 import org.apache.s2graph.core._
 import org.apache.s2graph.core.mysqls.{Label, LabelIndex, Service, ServiceColumn}
@@ -13,18 +13,24 @@ import sangria.schema.{Action, Args}
 import scala.concurrent._
 import scala.util.{Failure, Success, Try}
 
+
+/**
+  *
+  * @param graph
+  */
 class GraphRepository(graph: S2GraphLike) {
+
   val management = graph.management
   val parser = new RequestParser(graph)
+
   implicit val ec = graph.ec
 
   def partialVertexParamToVertex(column: ServiceColumn, param: PartialVertexParam): S2VertexLike = {
-    val id = JSONParser.jsValueToInnerVal(param.vid, column.columnType, column.schemaVersion).get
-    graph.toVertex(param.service.serviceName, column.columnName, id)
+    val vid = JSONParser.jsValueToInnerVal(param.vid, column.columnType, column.schemaVersion).get
+    graph.toVertex(param.service.serviceName, column.columnName, vid)
   }
 
-  def partialEdgeParamToS2Edge(labelName: String,
-                               param: PartialEdgeParam): S2EdgeLike = {
+  def partialEdgeParamToS2Edge(labelName: String, param: PartialEdgeParam): S2EdgeLike = {
     graph.toEdge(
       srcId = param.from,
       tgtId = param.to,
@@ -34,22 +40,22 @@ class GraphRepository(graph: S2GraphLike) {
     )
   }
 
-  def addEdges(args: Args): Future[Seq[BooleanResponse]] = {
+  def addEdges(args: Args): Future[Seq[MutateResponse]] = {
     val edges: Seq[S2EdgeLike] = args.raw.keys.toList.flatMap { labelName =>
       val params = args.arg[Vector[PartialEdgeParam]](labelName)
       params.map(param => partialEdgeParamToS2Edge(labelName, param))
     }
 
-    graph.mutateEdges(edges).map(a => a.map(b => BooleanResponse(b.isSuccess)))
+    graph.mutateEdges(edges)
   }
 
-  def addEdge(args: Args): Future[Option[BooleanResponse]] = {
+  def addEdge(args: Args): Future[Option[MutateResponse]] = {
     val edges: Seq[S2EdgeLike] = args.raw.keys.toList.map { labelName =>
       val param = args.arg[PartialEdgeParam](labelName)
       partialEdgeParamToS2Edge(labelName, param)
     }
 
-    graph.mutateEdges(edges).map(a => a.map(b => BooleanResponse(b.isSuccess))).map(_.headOption)
+    graph.mutateEdges(edges).map(_.headOption)
   }
 
   def getEdges(vertex: S2VertexLike, label: Label, _dir: String): Future[Seq[S2EdgeLike]] = {
@@ -67,16 +73,11 @@ class GraphRepository(graph: S2GraphLike) {
     Service.findByName(serviceName) match {
       case Some(_) => Failure(new RuntimeException(s"Service (${serviceName}) already exists"))
       case None =>
-        val cluster =
-          args.argOpt[String]("cluster").getOrElse(parser.DefaultCluster)
-        val hTableName = args
-          .argOpt[String]("hTableName")
-          .getOrElse(s"${serviceName}-${parser.DefaultPhase}")
+        val cluster = args.argOpt[String]("cluster").getOrElse(parser.DefaultCluster)
+        val hTableName = args.argOpt[String]("hTableName").getOrElse(s"${serviceName}-${parser.DefaultPhase}")
         val preSplitSize = args.argOpt[Int]("preSplitSize").getOrElse(1)
         val hTableTTL = args.argOpt[Int]("hTableTTL")
-        val compressionAlgorithm = args
-          .argOpt[String]("compressionAlgorithm")
-          .getOrElse(parser.DefaultCompressionAlgorithm)
+        val compressionAlgorithm = args.argOpt[String]("compressionAlgorithm").getOrElse(parser.DefaultCompressionAlgorithm)
 
         val serviceTry = management
           .createService(serviceName,
@@ -99,18 +100,13 @@ class GraphRepository(graph: S2GraphLike) {
     val allProps = args.argOpt[Vector[Prop]]("props").getOrElse(Vector.empty)
     val indices = args.argOpt[Vector[Index]]("indices").getOrElse(Vector.empty)
 
-    val serviceName =
-      args.argOpt[String]("serviceName").getOrElse(tgtServiceProp.name)
-    val consistencyLevel =
-      args.argOpt[String]("consistencyLevel").getOrElse("weak")
+    val serviceName = args.argOpt[String]("serviceName").getOrElse(tgtServiceProp.name)
+    val consistencyLevel = args.argOpt[String]("consistencyLevel").getOrElse("weak")
     val hTableName = args.argOpt[String]("hTableName")
     val hTableTTL = args.argOpt[Int]("hTableTTL")
-    val schemaVersion =
-      args.argOpt[String]("schemaVersion").getOrElse(HBaseType.DEFAULT_VERSION)
+    val schemaVersion = args.argOpt[String]("schemaVersion").getOrElse(HBaseType.DEFAULT_VERSION)
     val isAsync = args.argOpt("isAsync").getOrElse(false)
-    val compressionAlgorithm = args
-      .argOpt[String]("compressionAlgorithm")
-      .getOrElse(parser.DefaultCompressionAlgorithm)
+    val compressionAlgorithm = args.argOpt[String]("compressionAlgorithm").getOrElse(parser.DefaultCompressionAlgorithm)
     val isDirected = args.argOpt[Boolean]("isDirected").getOrElse(true)
     val options = args.argOpt[String]("options") // TODO: support option type
 
@@ -134,13 +130,6 @@ class GraphRepository(graph: S2GraphLike) {
       compressionAlgorithm,
       options
     )
-
-    labelTry match {
-      case Success(label) => Option(label)
-      case Failure(ex) =>
-        println(ex)
-        None
-    }
 
     labelTry
   }

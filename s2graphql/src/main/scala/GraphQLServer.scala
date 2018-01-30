@@ -22,7 +22,7 @@ import scala.util.{Failure, Success, Try}
 
 object GraphQLServer {
 
-  // init s2graph with config
+  // Init s2graph
   val numOfThread = Runtime.getRuntime.availableProcessors()
   val threadPool = Executors.newFixedThreadPool(numOfThread * 2)
 
@@ -34,13 +34,12 @@ object GraphQLServer {
   val s2Repository = new GraphRepository(s2graph)
   val schemaCache = new SafeUpdateCache[Schema[GraphRepository, Any]]("schema", maxSize = 1, ttl = schemaCacheTTL)
 
-  // in develpment mode: make schema every request
+  // In development mode, a new schema is created for each request.
   println(s"schemaCacheTTL: ${schemaCacheTTL}")
 
   def endpoint(requestJSON: spray.json.JsValue)(implicit e: ExecutionContext): Route = {
 
     val spray.json.JsObject(fields) = requestJSON
-
     val spray.json.JsString(query) = fields("query")
 
     val operation = fields.get("operationName") collect {
@@ -54,23 +53,22 @@ object GraphQLServer {
 
     QueryParser.parse(query) match {
       case Success(queryAst) => complete(executeGraphQLQuery(queryAst, operation, vars))
-      case Failure(error) => complete(BadRequest, spray.json.JsObject("error" -> JsString(error.getMessage)))
+      case Failure(error) => complete(BadRequest -> spray.json.JsObject("error" -> JsString(error.getMessage)))
     }
   }
 
   private def executeGraphQLQuery(query: Document, op: Option[String], vars: JsObject)(implicit e: ExecutionContext) = {
     val s2schema = schemaCache.withCache("s2Schema") {
-      println("Schema Updated:")
+      println(s"Schema Updated: ${System.currentTimeMillis()}")
 
-      val newSchema = new SchemaDef(s2Repository).S2GraphSchema
+      val s2Type = new S2Type(s2Repository)
+      val newSchema = new SchemaDef(s2Type).S2GraphSchema
 
       println(SchemaRenderer.renderSchema(newSchema))
       println("-" * 80)
 
       newSchema
     }
-
-    println(s"ts: ${System.currentTimeMillis()}, op: ${op}")
 
     Executor.execute(
       s2schema,

@@ -19,7 +19,7 @@ object Server extends App {
   import actorSystem.dispatcher
   import scala.concurrent.duration._
 
-  logger("Starting GRAPHQL server...")
+  println("Starting GRAPHQL server...")
 
   val route: Route =
     (post & path("graphql")) {
@@ -33,13 +33,10 @@ object Server extends App {
 
 
   def shutdown(): Unit = {
-    logger("Terminating...", YELLOW)
+    println("Terminating...")
     actorSystem.terminate()
     Await.result(actorSystem.whenTerminated, 10 seconds)
-    logger("Terminated... Bye", YELLOW)
-  }
 
-  private def logger(message: String, color: String = GREEN): Unit = {
-    println(color + message)
+    println("Terminated.")
   }
 }
