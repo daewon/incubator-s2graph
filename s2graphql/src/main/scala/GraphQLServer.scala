@@ -34,9 +34,6 @@ object GraphQLServer {
   val s2Repository = new GraphRepository(s2graph)
   val schemaCache = new SafeUpdateCache[Schema[GraphRepository, Any]]("schema", maxSize = 1, ttl = schemaCacheTTL)
 
-  // In development mode, a new schema is created for each request.
-  println(s"schemaCacheTTL: ${schemaCacheTTL}")
-
   def endpoint(requestJSON: spray.json.JsValue)(implicit e: ExecutionContext): Route = {
 
     val spray.json.JsObject(fields) = requestJSON
@@ -57,18 +54,26 @@ object GraphQLServer {
     }
   }
 
+  /**
+    * In development mode(schemaCacheTTL = -1),
+    * a new schema is created for each request.
+    */
+  println(s"schemaCacheTTL: ${schemaCacheTTL}")
+
+  private def createNewSchema(): Schema[GraphRepository, Any] = {
+    println(s"Schema updated: ${System.currentTimeMillis()}")
+
+    val s2Type = new S2Type(s2Repository)
+    val newSchema = new SchemaDef(s2Type).S2GraphSchema
+
+    println(SchemaRenderer.renderSchema(newSchema))
+    println("-" * 80)
+
+    newSchema
+  }
+
   private def executeGraphQLQuery(query: Document, op: Option[String], vars: JsObject)(implicit e: ExecutionContext) = {
-    val s2schema = schemaCache.withCache("s2Schema") {
-      println(s"Schema Updated: ${System.currentTimeMillis()}")
-
-      val s2Type = new S2Type(s2Repository)
-      val newSchema = new SchemaDef(s2Type).S2GraphSchema
-
-      println(SchemaRenderer.renderSchema(newSchema))
-      println("-" * 80)
-
-      newSchema
-    }
+    val s2schema = schemaCache.withCache("s2Schema")(createNewSchema())
 
     Executor.execute(
       s2schema,

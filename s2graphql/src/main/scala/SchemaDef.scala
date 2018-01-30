@@ -15,4 +15,3 @@ class SchemaDef(s2Type: S2Type) {
 
   val S2GraphSchema = Schema(S2QueryType, Option(S2MutationType))
 }
-

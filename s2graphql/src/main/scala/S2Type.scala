@@ -98,7 +98,7 @@ class S2Type(repo: GraphRepository) {
   import sangria.macros.derive._
   import S2Type._
 
-  lazy val DirArg = Argument("direction", OptionInputType(DirectionType), "direction of connected edges", defaultValue = "out")
+  lazy val DirArg = Argument("direction", OptionInputType(DirectionType), "desc here", defaultValue = "out")
 
   lazy val NameArg = Argument("name", StringType, description = "desc here")
 
@@ -135,6 +135,7 @@ class S2Type(repo: GraphRepository) {
 
   lazy val DirectionType = EnumType(
     "Direction",
+    description = Option("desc here"),
     values = List(
       EnumValue("out", value = "out"),
       EnumValue("in", value = "in")
@@ -143,7 +144,7 @@ class S2Type(repo: GraphRepository) {
 
   lazy val InputIndexType = InputObjectType[Index](
     "Index",
-    description = "description here",
+    description = "desc here",
     fields = List(
       InputField("name", StringType),
       InputField("propNames", ListInputType(StringType))
@@ -152,7 +153,7 @@ class S2Type(repo: GraphRepository) {
 
   lazy val InputPropType = InputObjectType[Prop](
     "Prop",
-    description = "A Property of Label",
+    description = "desc here",
     fields = List(
       InputField("name", StringType),
       InputField("dataType", DataTypeType),
@@ -164,6 +165,7 @@ class S2Type(repo: GraphRepository) {
 
   lazy val ServiceListType = EnumType(
     s"ServiceList",
+    description = Option("desc here"),
     values =
       dummyEnum +: repo.allServices.map { service =>
         EnumValue(service.serviceName, value = service.serviceName)
@@ -172,6 +174,7 @@ class S2Type(repo: GraphRepository) {
 
   lazy val LabelListType = EnumType(
     s"LabelList",
+    description = Option("desc here"),
     values =
       dummyEnum +: repo.allLabels.map { label =>
         EnumValue(label.label, value = label.label)
@@ -180,22 +183,25 @@ class S2Type(repo: GraphRepository) {
 
   lazy val CompressionAlgorithmType = EnumType(
     "CompressionAlgorithm",
+    description = Option("desc here"),
     values = List(
-      EnumValue("gz", description = Option("gzip"), value = "gz"),
-      EnumValue("lz4", description = Option("lz4"), value = "lz4")
+      EnumValue("gz", description = Option("desc here"), value = "gz"),
+      EnumValue("lz4", description = Option("desc here"), value = "lz4")
     )
   )
 
   lazy val ConsistencyLevelType = EnumType(
     "ConsistencyList",
+    description = Option("desc here"),
     values = List(
-      EnumValue("weak", description = Option("weak consistency"), value = "weak"),
-      EnumValue("strong", description = Option("strong consistency"), value = "strong")
+      EnumValue("weak", description = Option("desc here"), value = "weak"),
+      EnumValue("strong", description = Option("desc here"), value = "strong")
     )
   )
 
   lazy val InputLabelServiceType = InputObjectType[LabelServiceProp](
     "LabelServiceProp",
+    description = "desc here",
     fields = List(
       InputField("name", ServiceListType),
       InputField("columnName", StringType),
@@ -205,12 +211,13 @@ class S2Type(repo: GraphRepository) {
 
   lazy val LabelIndexType = deriveObjectType[GraphRepository, LabelIndex](
     ObjectTypeName("LabelIndex"),
+    ObjectTypeDescription("desc here"),
     ExcludeFields("seq", "metaSeqs", "formulars", "labelId")
   )
 
   lazy val LabelType = deriveObjectType[GraphRepository, Label](
     ObjectTypeName("Label"),
-    ObjectTypeDescription("Label"),
+    ObjectTypeDescription("desc here"),
     AddFields(
       Field("indexes", ListType(LabelIndexType), resolve = c => Nil),
       Field("props", ListType(LabelMetaType), resolve = c => Nil)
@@ -295,7 +302,9 @@ class S2Type(repo: GraphRepository) {
   )
 
   def makeMutationResponseType[T](name: String, desc: String, tpe: ObjectType[_, T]) = {
-    ObjectType(name, desc,
+    ObjectType(
+      name,
+      desc,
       () => fields[Unit, MutationResponse[T]](
         Field("isSuccess",
           BooleanType,
@@ -319,6 +328,7 @@ class S2Type(repo: GraphRepository) {
   lazy val serviceField: Field[GraphRepository, Any] = Field(
     "Services",
     ListType(ServiceType),
+    description = Option("desc here"),
     arguments = List(ServiceNameArg),
     resolve = { c =>
       c.argOpt[String]("name") match {
@@ -331,6 +341,7 @@ class S2Type(repo: GraphRepository) {
   lazy val labelField: Field[GraphRepository, Any] = Field(
     "Labels",
     ListType(LabelType),
+    description = Option("desc here"),
     arguments = List(LabelNameArg),
     resolve = { c =>
       c.argOpt[String]("name") match {
@@ -350,49 +361,47 @@ class S2Type(repo: GraphRepository) {
     }
   )
 
+  def makeEdgePropFields(edgeFieldNameWithTypes: List[(String, String)]): List[Field[GraphRepository, Any]] = {
+    def makeField[A](name: String, cType: String, tpe: ScalarType[A]): Field[GraphRepository, Any] =
+      Field(name, OptionType(tpe), description = Option("desc here"), resolve = _.value match {
+        case e: S2EdgeLike =>
+          val innerVal = name match {
+            case "from" => e.srcForVertex.innerId
+            case "to" => e.tgtForVertex.innerId
+            case _ => e.propertyValue(name).get.innerVal
+          }
+
+          JSONParser.innerValToAny(innerVal, cType).asInstanceOf[A]
+
+        case _ => throw new RuntimeException("dead code")
+      })
+
+    edgeFieldNameWithTypes.map { case (cName, cType) =>
+      cType match {
+        case "boolean" | "bool" => makeField[Boolean](cName, cType, BooleanType)
+        case "string" | "str" | "s" => makeField[String](cName, cType, StringType)
+        case "int" | "integer" | "i" | "int32" | "integer32" => makeField[Int](cName, cType, IntType)
+        case "long" | "l" | "int64" | "integer64" => makeField[Long](cName, cType, LongType)
+        case "double" | "d" | "float64" | "float" | "f" | "float32" => makeField[Double](cName, cType, FloatType)
+        case _ => throw new RuntimeException(s"Cannot support data type: ${cType}")
+      }
+    }
+  }
+
+  // ex: KakaoFavorites
   lazy val serviceVertexFields: List[Field[GraphRepository, Any]] = repo.allServices.map { service =>
     val serviceId = service.id.get
     val connectedLabels = repo.allLabels.filter { lb =>
       lb.srcServiceId == serviceId || lb.tgtServiceId == serviceId
     }.distinct
 
-    // label connected on services
+    // label connected on services, friends, post
     lazy val connectedLabelFields: List[Field[GraphRepository, Any]] = connectedLabels.map { label =>
       val labelColumns = List("from" -> label.srcColumnType, "to" -> label.tgtColumnType)
       val labelProps = label.labelMetas.map { lm => lm.name -> lm.dataType }
 
-      def makeEdgePropField[A](name: String, cType: String, tpe: ScalarType[A]): Field[GraphRepository, Any] = {
-        Field(name, OptionType(tpe), description = Option("desc here"), resolve = _.value match {
-          case e: S2EdgeLike =>
-            val innerVal = name match {
-              case "from" => e.srcForVertex.innerId
-              case "to" => e.tgtForVertex.innerId
-              case _ => e.propertyValue(name).get.innerVal
-            }
-
-            JSONParser.innerValToAny(innerVal, cType).asInstanceOf[A]
-
-          case _ => throw new RuntimeException("dead code")
-        })
-      }
-
-      // from, to, props
-      lazy val edgeFields: List[Field[GraphRepository, Any]] = (labelColumns ++ labelProps).map { case (cName, cType) =>
-        cType match {
-          case "boolean" | "bool" => makeEdgePropField[Boolean](cName, cType, BooleanType)
-          case "string" | "str" | "s" => makeEdgePropField[String](cName, cType, StringType)
-          case "int" | "integer" | "i" | "int32" | "integer32" => makeEdgePropField[Int](cName, cType, IntType)
-          case "long" | "l" | "int64" | "integer64" => makeEdgePropField[Long](cName, cType, LongType)
-          case "double" | "d" | "float64" | "float" | "f" | "float32" => makeEdgePropField[Double](cName, cType, FloatType)
-          case _ => throw new RuntimeException(s"Cannot support data type: ${cType}")
-        }
-      }
-
-      lazy val EdgeType = ObjectType(
-        label.label,
-        () => fields[GraphRepository, Any](edgeFields ++ connectedLabelFields: _*)
-      )
-
+      lazy val EdgeType = ObjectType(label.label, () => fields[GraphRepository, Any](edgeFields ++ connectedLabelFields: _*))
+      lazy val edgeFields: List[Field[GraphRepository, Any]] = makeEdgePropFields(labelColumns ++ labelProps)
       lazy val edgeTypeField: Field[GraphRepository, Any] = Field(
         label.label,
         ListType(EdgeType),
@@ -439,14 +448,22 @@ class S2Type(repo: GraphRepository) {
     ): Field[GraphRepository, Any]
   }
 
-
   /**
     * Query fields
+    * Provide s2graph query API
+    *
+    * - Fields is created(or changed) for metadata is changed.
     */
   lazy val queryFields = Seq(serviceField, labelField) ++ serviceVertexFields
 
   /**
     * Mutation fields
+    * Provide s2graph management API
+    *
+    * - createService
+    * - createLabel
+    * - addEdge
+    * - addEdges
     */
   lazy val mutationFields: List[Field[GraphRepository, Any]] = List(
     Field("createService",
