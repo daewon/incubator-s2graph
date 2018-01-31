@@ -141,4 +141,5 @@ class GraphRepository(graph: S2GraphLike) {
   def allLabels: List[Label] = Label.findAll()
 
   def findLabelByName(name: String): Option[Label] = Label.findByName(name)
+
 }

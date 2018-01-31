@@ -361,6 +361,15 @@ class S2Type(repo: GraphRepository) {
     }
   )
 
+  lazy val tsField: Field[GraphRepository, Any] =
+    Field("timestamp",
+      LongType,
+      description = Option("desc here"),
+      resolve = _.value match {
+        case e: S2EdgeLike => e.ts
+        case _ => throw new RuntimeException("dead code")
+      })
+
   def makeEdgePropFields(edgeFieldNameWithTypes: List[(String, String)]): List[Field[GraphRepository, Any]] = {
     def makeField[A](name: String, cType: String, tpe: ScalarType[A]): Field[GraphRepository, Any] =
       Field(name, OptionType(tpe), description = Option("desc here"), resolve = _.value match {
@@ -395,13 +404,13 @@ class S2Type(repo: GraphRepository) {
       lb.srcServiceId == serviceId || lb.tgtServiceId == serviceId
     }.distinct
 
-    // label connected on services, friends, post
+   // label connected on services, friends, post
     lazy val connectedLabelFields: List[Field[GraphRepository, Any]] = connectedLabels.map { label =>
       val labelColumns = List("from" -> label.srcColumnType, "to" -> label.tgtColumnType)
       val labelProps = label.labelMetas.map { lm => lm.name -> lm.dataType }
 
       lazy val EdgeType = ObjectType(label.label, () => fields[GraphRepository, Any](edgeFields ++ connectedLabelFields: _*))
-      lazy val edgeFields: List[Field[GraphRepository, Any]] = makeEdgePropFields(labelColumns ++ labelProps)
+      lazy val edgeFields: List[Field[GraphRepository, Any]] = tsField :: makeEdgePropFields(labelColumns ++ labelProps)
       lazy val edgeTypeField: Field[GraphRepository, Any] = Field(
         label.label,
         ListType(EdgeType),
