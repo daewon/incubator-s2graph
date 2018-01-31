@@ -325,32 +325,6 @@ class S2Type(repo: GraphRepository) {
     )
   }
 
-  lazy val serviceField: Field[GraphRepository, Any] = Field(
-    "Services",
-    ListType(ServiceType),
-    description = Option("desc here"),
-    arguments = List(ServiceNameArg),
-    resolve = { c =>
-      c.argOpt[String]("name") match {
-        case Some(name) => c.ctx.allServices.filter(_.serviceName == name)
-        case None => c.ctx.allServices
-      }
-    }
-  )
-
-  lazy val labelField: Field[GraphRepository, Any] = Field(
-    "Labels",
-    ListType(LabelType),
-    description = Option("desc here"),
-    arguments = List(LabelNameArg),
-    resolve = { c =>
-      c.argOpt[String]("name") match {
-        case Some(name) => c.ctx.allLabels.filter(_.label == name)
-        case None => c.ctx.allLabels
-      }
-    }
-  )
-
   lazy val vertexIdField: Field[GraphRepository, Any] = Field(
     "id",
     PlayJsonPolyType.PolyType,
@@ -404,7 +378,7 @@ class S2Type(repo: GraphRepository) {
       lb.srcServiceId == serviceId || lb.tgtServiceId == serviceId
     }.distinct
 
-   // label connected on services, friends, post
+    // label connected on services, friends, post
     lazy val connectedLabelFields: List[Field[GraphRepository, Any]] = connectedLabels.map { label =>
       val labelColumns = List("from" -> label.srcColumnType, "to" -> label.tgtColumnType)
       val labelProps = label.labelMetas.map { lm => lm.name -> lm.dataType }
@@ -456,6 +430,32 @@ class S2Type(repo: GraphRepository) {
       }
     ): Field[GraphRepository, Any]
   }
+
+  lazy val serviceField: Field[GraphRepository, Any] = Field(
+    "Services",
+    ListType(ServiceType),
+    description = Option("desc here"),
+    arguments = List(ServiceNameArg),
+    resolve = { c =>
+      c.argOpt[String]("name") match {
+        case Some(name) => c.ctx.allServices.filter(_.serviceName == name)
+        case None => c.ctx.allServices
+      }
+    }
+  )
+
+  lazy val labelField: Field[GraphRepository, Any] = Field(
+    "Labels",
+    ListType(LabelType),
+    description = Option("desc here"),
+    arguments = List(LabelNameArg),
+    resolve = { c =>
+      c.argOpt[String]("name") match {
+        case Some(name) => c.ctx.allLabels.filter(_.label == name)
+        case None => c.ctx.allLabels
+      }
+    }
+  )
 
   /**
     * Query fields
