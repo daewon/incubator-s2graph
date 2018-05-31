@@ -48,4 +48,11 @@ class SchemaDef(g: GraphRepository) {
   )
 
   val S2GraphSchema = Schema(S2QueryType, Option(S2MutationType))
+
+  // For introspection
+  def S2GraphSimpleSchema(serviceName: String) = {
+    val s2SimpleType = new S2SimpleType(g).buildSimpleSchema(serviceName)
+    Schema(s2SimpleType)
+  }
+
 }

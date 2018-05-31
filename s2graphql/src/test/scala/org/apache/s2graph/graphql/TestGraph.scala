@@ -19,6 +19,8 @@
 
 package org.apache.s2graph.graphql
 
+import java.io.PrintWriter
+
 import com.typesafe.config.Config
 import org.apache.s2graph
 import org.apache.s2graph.core.Management.JsonModel.Prop
@@ -29,7 +31,7 @@ import org.apache.s2graph.graphql
 import org.apache.s2graph.graphql.repository.GraphRepository
 import org.apache.s2graph.graphql.types.SchemaDef
 import play.api.libs.json._
-import sangria.ast.Document
+import sangria.ast.{Document, SchemaDefinition}
 import sangria.execution.Executor
 import sangria.execution.deferred.DeferredResolver
 import sangria.renderer.SchemaRenderer
@@ -41,7 +43,6 @@ import scala.concurrent.duration._
 import scala.util._
 
 object TestGraph {
-
 }
 
 trait TestGraph {
@@ -60,17 +61,10 @@ trait TestGraph {
 
   val resolver: DeferredResolver[GraphRepository] = DeferredResolver.fetchers(vertexFetcher, edgeFetcher)
 
-  def queryAsJs(query: Document): JsValue = {
+  def queryAsJs(query: Document, _schema: Schema[GraphRepository, Any] = schema): JsValue = {
     implicit val playJsonMarshaller = sangria.marshalling.playJson.PlayJsonResultMarshaller
     Await.result(
-      Executor.execute(schema, query, repository, deferredResolver = resolver),
-      Duration("10 sec")
-    )
-  }
-
-  def queryAsRaw(query: Document, graph: TestGraph): Any = {
-    Await.result(
-      Executor.execute(schema, query, repository, deferredResolver = resolver),
+      Executor.execute(_schema, query, repository, deferredResolver = resolver),
       Duration("10 sec")
     )
   }
@@ -94,7 +88,6 @@ class EmptyGraph(config: Config) extends TestGraph {
   override def open(): Unit = {
     org.apache.s2graph.core.schema.Schema.shutdown(true)
   }
-
 }
 
 class BasicGraph(config: Config) extends EmptyGraph(config) {
@@ -134,6 +127,70 @@ class BasicGraph(config: Config) extends EmptyGraph(config) {
       serviceName,
       Nil,
       Seq(Prop("score", "0", "int")),
+      true,
+      "strong"
+    )
+}
+
+class UserActivitySimpleGraph(config: Config) extends EmptyGraph(config) {
+  val serviceName = "KAKAO"
+
+  val userColumnName = "User"
+  val activityColumnName = "Activity"
+  val userActivityLabelName = "UserActivity"
+  val friendLabelName = "Friends"
+
+  Management.deleteService(serviceName)
+  val serviceTry: Try[Service] =
+    management.createService(
+      serviceName,
+      "localhost",
+      s"${serviceName}_table",
+      1,
+      None
+    )
+
+  val userColumn = management.createServiceColumn(
+    serviceName,
+    userColumnName,
+    "string",
+    List(
+      Prop("age", "0", "int"),
+      Prop("gender", "", "string")
+    )
+  )
+
+  val activityColumn = management.createServiceColumn(
+    serviceName,
+    userColumnName,
+    "string",
+    List(
+      Prop("type", "0", "string")
+    )
+  )
+
+  Management.deleteLabel(userActivityLabelName)
+  val labelTry: Try[Label] =
+    management.createLabel(
+      userActivityLabelName,
+      serviceName, userColumnName, "string",
+      serviceName, activityColumnName, "string",
+      serviceName,
+      Nil,
+      Seq(Prop("score", "0", "int"), Prop("type", "0", "string")),
+      true,
+      "strong"
+    )
+
+  Management.deleteLabel(friendLabelName)
+  val friendLabelTry: Try[Label] =
+    management.createLabel(
+      friendLabelName,
+      serviceName, userColumnName, "string",
+      serviceName, userColumnName, "string",
+      serviceName,
+      Nil,
+      Seq(Prop("since", "0", "int")),
       true,
       "strong"
     )
